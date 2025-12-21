@@ -1,0 +1,85 @@
+const mongoose = require('mongoose')
+const {Schema} = mongoose;
+
+const userSchema = new Schema({
+    firstName:{
+        type:String,
+        required:true,
+        minLength:3,
+        maxLength:20
+    },
+    lastName:{
+        type:String,
+        minLength:3,
+        maxLength:20
+    },
+    emailId:{
+        type:String,
+        required:true,
+        unique:true,
+        immutable:true,
+        trim:true,
+        lowercase:true,
+    },
+    password:{
+        type:String,
+        required:true,
+    },
+    phone:{
+        type:String,
+        trim:true
+    },
+    address:{
+        street:{
+            type:String
+        },
+        city:{
+            type:String
+        },
+        state:{
+            type:String
+        },
+        zipCode:{
+            type:String
+        },
+        country:{
+            type:String,
+            default:'INDIA'
+        }
+    },
+    role:{
+        type:String,
+        enum:['admin','user'],
+        default:'user'
+    },
+    cart:{
+        type:[{
+            productId:{
+                type:Schema.Types.ObjectId,
+                ref:'product'
+            },
+            quantity:{
+                type:Number,
+                default:1
+            }
+        }],
+        default:[]
+    },
+    orders:{
+        type:[{
+            type:Schema.Types.ObjectId,
+            ref:'order'
+        }],
+        default:[]
+    }
+},{timestamps:true})
+
+userSchema.post('findOneAndDelete',async function (userInfo) {
+    if(userInfo){
+        await mongoose.model('order').deleteMany({userId:userInfo._id})
+    }
+})
+
+const User = mongoose.model('user',userSchema)
+
+module.exports = User;
