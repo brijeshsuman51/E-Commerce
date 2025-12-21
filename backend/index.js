@@ -5,7 +5,8 @@ const main = require('./config/mongoDB')
 const cookieParser = require('cookie-parser');
 const authRouter = require('./routes/userRoute');
 const cors = require('cors');
-const redisClient = require('./config/redisDB')
+const redisClient = require('./config/redisDB');
+const productRouter = require('./routes/productRoute');
 
 app.use(cors({
     origin: 'http://localhost:5173',
@@ -16,6 +17,7 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.use('/user',authRouter)
+app.use('/product',productRouter)
 
 const InitializeConnection = async () => {
     try {
