@@ -1,0 +1,184 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink } from "react-router"; 
+import { useDispatch, useSelector } from "react-redux";
+import { 
+  Search, 
+  ShoppingCart, 
+  User, 
+  LogOut, 
+  ChevronDown,
+  UserCircle,
+  Shield
+} from 'lucide-react';
+import { logoutUser } from '../authSlice';
+
+const Navbar = () => {
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    setIsDropdownOpen(false);
+  };
+
+  const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return '?'
+    const trimmed = name.trim()
+    if (!trimmed) return '?'
+    return trimmed[0].toUpperCase()
+  }
+
+  return (
+    <nav className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-300">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8">
+        <div className="flex items-center justify-between h-16 md:h-20 gap-4">
+          
+           {/* Brand Logo  */}
+          <div className="flex-shrink-0">
+            <NavLink to="/" className="group flex flex-col items-start transition-transform hover:scale-105">
+              <span className="text-2xl font-black tracking-tighter text-blue-600 group-hover:text-blue-700">
+                E-COMMERCE
+              </span>
+              <div className="flex items-center gap-1 -mt-1.5">
+                <span className="text-[10px] font-medium text-gray-500 italic uppercase tracking-widest">
+                  Shop Smart
+                </span>
+                <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+              </div>
+            </NavLink>
+          </div>
+
+          {/* Search Bar */}
+          <div className="hidden md:flex flex-1 max-w-2xl group">
+            <div className="relative w-full">
+              <input 
+                type="text" 
+                placeholder="Search products, brands and more..." 
+                className="w-full h-11 pl-12 pr-4 bg-gray-100 border-transparent focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all outline-none text-sm"
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Login Buttons */}
+
+          <div className="flex items-center gap-2 md:gap-5">
+            
+            <div className="relative" ref={dropdownRef}>
+              {user ? (
+                <>
+                  <button 
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="group flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-4 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
+                  >
+                    <div className="flex flex-col items-start mr-1 text-left">
+                      <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {user.firstName || 'User'}
+                      </span>
+                    </div>
+
+                    <div className="relative bg-blue-50 group-hover:bg-blue-600 w-10 h-10 rounded-xl transition-all duration-300 flex items-center justify-center">
+                      <span className="font-black text-sm text-blue-600 group-hover:text-white uppercase transition-colors">
+                        {getInitials(user.firstName)}
+                      </span>
+                      </div>
+                  </button>
+
+                  {/* Custom Menu */}
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="px-5 py-4 border-b border-gray-50">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account info</p>
+                        <p className="text-sm font-black text-gray-800 mt-1">{user.firstName} {user.lastName || ''}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.emailId}</p>
+                      </div>
+
+                      <div className="p-2">
+                        <NavLink 
+                          to="/profile" 
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                        >
+                          <UserCircle className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                          My Profile
+                        </NavLink>
+
+                        {user.role === 'admin' && (
+                          <NavLink 
+                            to="/admin" 
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-purple-50 hover:text-purple-600 transition-colors group"
+                          >
+                            <Shield className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
+                            Admin Panel
+                          </NavLink>
+                        )}
+
+                        <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>
+
+                        <button 
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors group text-left"
+                        >
+                          <LogOut className="w-5 h-5 text-red-400 group-hover:text-red-500" />
+                          Logout
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <NavLink 
+                  to="/login" 
+                  className="group relative flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-5 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
+                >
+                  <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    Sign In
+                  </span>
+                  <div className="bg-gray-50 group-hover:bg-blue-600 p-2.5 rounded-xl transition-all duration-300">
+                    <User className="w-5 h-5 text-gray-600 group-hover:text-white transition-transform group-hover:scale-110" />
+                  </div>
+                </NavLink>
+              )}
+            </div>
+
+            {/* Cart Button */}
+            <NavLink 
+              to="/cart" 
+              className="group relative flex items-center gap-2 bg-white border border-gray-200 p-1.5 pl-4 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300 active:scale-95"
+            >
+              <div className="flex flex-col items-start mr-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                  My Cart
+                </span>
+                <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  $0.00
+                </span>
+              </div>
+
+              <div className="relative bg-gray-50 group-hover:bg-blue-600 p-2.5 rounded-xl transition-colors duration-300">
+                <ShoppingCart className="w-5 h-5 text-gray-600 group-hover:text-white transition-all duration-300" />
+              </div>
+            </NavLink>
+
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default Navbar;
