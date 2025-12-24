@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Star, Truck, Shield, Loader2 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart } from '../cartSlice';
+import { fetchCart } from '../cartSlice';
 
 const Homepage = () => {
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,6 +27,20 @@ const Homepage = () => {
 
     fetchProducts();
   }, []);
+
+  const handleAddToCart = async (productId) => {
+  if (!user) {
+    alert('Please login');
+    return;
+  }
+
+  try {
+    await dispatch(addToCart({ productId, quantity: 1 })).unwrap();
+    alert('Added to cart!');
+  } catch (error) {
+    alert('Failed: ' + error);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -123,6 +142,7 @@ const Homepage = () => {
                       <span className="text-xl font-bold text-gray-900">${product.price}</span>
                       <button 
                         disabled={product.stock === 0}
+                        onClick={() => handleAddToCart(product._id)}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                           product.stock === 0 
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 

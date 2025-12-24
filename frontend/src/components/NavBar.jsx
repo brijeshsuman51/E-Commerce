@@ -5,19 +5,26 @@ import {
   Search, 
   ShoppingCart, 
   User, 
-  LogOut, 
-  ChevronDown,
+  LogOut,
   UserCircle,
   Shield
 } from 'lucide-react';
 import { logoutUser } from '../authSlice';
+import { fetchCart,clearCart } from '../cartSlice';
 
 const Navbar = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { total } = useSelector((state) => state.cart);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchCart());
+    }
+  }, [dispatch, user]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -31,6 +38,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     dispatch(logoutUser());
+    dispatch(clearCart());
     setIsDropdownOpen(false);
   };
 
@@ -165,7 +173,7 @@ const Navbar = () => {
                   My Cart
                 </span>
                 <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  $0.00
+                  ${total.toFixed(2)}
                 </span>
               </div>
 

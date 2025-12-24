@@ -8,8 +8,10 @@ const validate = (data) => {
     if(!conditionfulfill){
         throw new Error("Invalid Credentials")
     }
+
     if(!validator.isEmail(data.emailId))
         throw new Error("Invalid Credentials")
+    
     if(!validator.isStrongPassword(data.password))
         throw new Error("Weak Password")
 }
