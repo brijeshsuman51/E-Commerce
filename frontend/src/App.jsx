@@ -9,6 +9,8 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Cart from './pages/Cart';
 import Order from './pages/Order';
+import ProductPage from './pages/ProductPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   const dispatch = useDispatch();
@@ -28,6 +30,8 @@ function App() {
               <Route path="/signup" element={<SignUp />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/orders" element={<Order />} />
+              <Route path="/product/:id" element={<ProductPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Routes>
           </main>
         </div>

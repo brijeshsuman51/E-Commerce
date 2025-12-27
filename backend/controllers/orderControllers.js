@@ -26,7 +26,8 @@ const createOrder = async (req,res) => {
             orderProducts.push({
                 productId: item.productId,
                 quantity: item.quantity,
-                price: price
+                price: price,
+                name: product.name
             })
             // Decrease stock
             product.stock -= item.quantity;

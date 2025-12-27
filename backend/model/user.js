@@ -9,9 +9,9 @@ const userSchema = new Schema({
         maxLength:20
     },
     lastName:{
-        type:String,
-        minLength:3,
-        maxLength:20
+        type:String, 
+        maxLength:20,
+        default:''
     },
     emailId:{
         type:String,
@@ -27,7 +27,8 @@ const userSchema = new Schema({
     },
     phone:{
         type:String,
-        trim:true
+        trim:true,
+        default:''
     },
     address:{
         street:{

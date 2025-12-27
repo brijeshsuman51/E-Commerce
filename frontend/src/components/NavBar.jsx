@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NavLink } from "react-router"; 
+import { NavLink, useNavigate } from "react-router"; 
 import { useDispatch, useSelector } from "react-redux";
 import { 
   Search, 
@@ -11,14 +11,20 @@ import {
 } from 'lucide-react';
 import { logoutUser } from '../authSlice';
 import { fetchCart,clearCart } from '../cartSlice';
+import axiosClient from '../utils/axiosClient';
 
 const Navbar = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const { total } = useSelector((state) => state.cart);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState([]);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const searchRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -27,9 +33,24 @@ const Navbar = () => {
   }, [dispatch, user]);
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await axiosClient.get('/product/getAllProducts');
+        setAllProducts(response.data);
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setIsSearchDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -40,6 +61,22 @@ const Navbar = () => {
     dispatch(logoutUser());
     dispatch(clearCart());
     setIsDropdownOpen(false);
+  };
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setIsSearchDropdownOpen(query.length > 0);
+  };
+
+  const filteredProducts = allProducts.filter(product =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleProductClick = (productId) => {
+    navigate(`/product/${productId}`);
+    setIsSearchDropdownOpen(false);
+    setSearchQuery('');
   };
 
   const getInitials = (name) => {
@@ -70,14 +107,57 @@ const Navbar = () => {
           </div>
 
           {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-2xl group">
+          <div className="hidden md:flex flex-1 max-w-2xl group" ref={searchRef}>
             <div className="relative w-full">
               <input 
                 type="text" 
                 placeholder="Search products, brands and more..." 
+                value={searchQuery}
+                onChange={handleSearchChange}
                 className="w-full h-11 pl-12 pr-4 bg-gray-100 border-transparent focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all outline-none text-sm"
               />
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
+              
+              {/* Search Dropdown */}
+              {isSearchDropdownOpen && filteredProducts.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-y-auto z-50">
+                  {filteredProducts.slice(0, 10).map((product) => (
+                    <div
+                      key={product._id}
+                      onClick={() => handleProductClick(product._id)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        {product.images && product.images.length > 0 ? (
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <span className="text-gray-400 text-xs">No img</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {product.name}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {product.category} • ${product.price}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {isSearchDropdownOpen && filteredProducts.length === 0 && searchQuery.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                    No products found matching "{searchQuery}"
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

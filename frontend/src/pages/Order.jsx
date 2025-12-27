@@ -142,20 +142,39 @@ const Order = () => {
                     {order.products.map((item, index) => (
                       <div key={index} className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                          {item.productId.images && item.productId.images.length > 0 ? (
-                            <img
-                              src={item.productId.images[0]}
-                              alt={item.productId.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex items-center justify-center h-full">
-                              <Package className="w-6 h-6 text-gray-300" />
+                          {order.products.map((item, index) => (
+                          <div key={index} className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                              {item.productId && item.productId.images && item.productId.images.length > 0 ? (
+                                <img
+                                  src={item.productId.images[0]}
+                                  alt={item.name || item.productId?.name || 'Product Image'} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex items-center justify-center h-full">
+                                  <Package className="w-6 h-6 text-gray-300" />
+                                </div>
+                              )}
                             </div>
-                          )}
+                            <div className="flex-1">
+                              <h5 className="font-medium text-gray-900">
+                                {item.name || (item.productId ? item.productId.name : 'Product Unavailable')}
+                              </h5>
+                              <p className="text-sm text-gray-600">
+                                Quantity: {item.quantity} × ${item.price}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-gray-900">
+                                ${(item.price * item.quantity).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
                         </div>
                         <div className="flex-1">
-                          <h5 className="font-medium text-gray-900">{item.productId.name}</h5>
+                          <h5 className="font-medium text-gray-900">{item.name || (item.productId ? item.productId.name : 'Product Unavailable')}</h5>
                           <p className="text-sm text-gray-600">
                             Quantity: {item.quantity} × ${item.price}
                           </p>

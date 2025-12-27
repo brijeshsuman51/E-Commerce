@@ -159,23 +159,30 @@ const updateUserProfile = async (req, res) => {
         const { firstName, lastName, phone, address } = req.body;
 
         const updateData = {};
-        if (firstName !== undefined) updateData.firstName = firstName;
-        if (lastName !== undefined) updateData.lastName = lastName;
-        if (phone !== undefined) updateData.phone = phone;
-        
+        if (firstName !== undefined && firstName !== '') updateData.firstName = firstName;
+        if (lastName !== undefined && lastName !== '') updateData.lastName = lastName;
+        if (phone !== undefined && phone !== '') updateData.phone = phone;
+
 
         if (address !== undefined) {
-            updateData.address = {
-                ...address 
-            };
+            const addressData = {};
+            if (address.street !== undefined && address.street !== '') addressData.street = address.street;
+            if (address.city !== undefined && address.city !== '') addressData.city = address.city;
+            if (address.state !== undefined && address.state !== '') addressData.state = address.state;
+            if (address.zipCode !== undefined && address.zipCode !== '') addressData.zipCode = address.zipCode;
+            if (address.country !== undefined && address.country !== '') addressData.country = address.country;
+
+            if (Object.keys(addressData).length > 0) {
+                updateData.address = addressData;
+            }
         }
 
         const user = await User.findByIdAndUpdate(
             userId,
             updateData,
-            { 
-                new: true,           
-                runValidators: true  
+            {
+                new: true,
+                runValidators: true
             }
         ).select('-password');
 
@@ -192,4 +199,4 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
-module.exports = {Register,Login,Logout,deleteProfile,checkUser,getUserProfile,updateUserProfile}
+module.exports = {Register,Login,Logout,deleteProfile,checkUser,getUserProfile,updateUserProfile};

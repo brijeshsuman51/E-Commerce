@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, Star, Truck, Shield, Loader2 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../cartSlice';
-import { fetchCart } from '../cartSlice';
 
 const Homepage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,17 @@ const Homepage = () => {
 
     fetchProducts();
   }, []);
+
+  const handleShopNow = () => {
+    if (user) {
+      const featuredSection = document.getElementById('featured-products');
+      if (featuredSection) {
+        featuredSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate('/login');
+    }
+  };
 
   const handleAddToCart = async (productId) => {
   if (!user) {
@@ -54,7 +66,7 @@ const Homepage = () => {
             Discover amazing products at unbeatable prices. Shop with confidence and enjoy fast, secure delivery.
           </p>
           <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-            Start Shopping
+            <a href="#featured-products" className="block">Start Shopping</a>
           </button>
         </div>
       </section>
@@ -88,7 +100,7 @@ const Homepage = () => {
       </section>
 
       {/* Product Section  */}
-      <section className="py-16 bg-white">
+      <section id="featured-products" className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Featured Products</h2>
           
@@ -105,7 +117,10 @@ const Homepage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => (
                 <div key={product._id} className="group bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="relative bg-gray-100 w-full h-48 rounded-lg mb-4 overflow-hidden">
+                  <div 
+                    className="relative bg-gray-100 w-full h-60 rounded-lg mb-4 overflow-hidden cursor-pointer"
+                    onClick={() => navigate(`/product/${product._id}`)}
+                  >
                     {product.images && product.images.length > 0 ? (
                       <img 
                         src={product.images[0]} 
@@ -129,7 +144,11 @@ const Homepage = () => {
                     <p className="text-xs text-blue-600 font-semibold uppercase tracking-wider mb-1">
                       {product.category}
                     </p>
-                    <h3 className="font-bold text-gray-900 truncate mb-1" title={product.name}>
+                    <h3 
+                      className="font-bold text-gray-900 truncate mb-1 cursor-pointer hover:text-blue-600 transition-colors" 
+                      title={product.name}
+                      onClick={() => navigate(`/product/${product._id}`)}
+                    >
                       {product.name}
                     </h3>
                     <div className="flex items-center mb-2">
@@ -165,7 +184,10 @@ const Homepage = () => {
           <h2 className="text-3xl font-bold mb-4">Ready to Start Shopping?</h2>
           <p className="text-xl mb-8">Join thousands of satisfied customers today.</p>
           <div className="space-x-4">
-            <button className="bg-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={handleShopNow}
+              className="bg-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
               Shop Now
             </button>
             <button className="border border-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-gray-900 transition-colors">
