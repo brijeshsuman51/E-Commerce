@@ -5,9 +5,9 @@ const {createProduct,updateProduct,deleteProduct,getProductById,getAllProducts,g
 const userMiddleware = require("../middleware/userMiddleware")
 
 
-productRouter.post("/create",userMiddleware,createProduct);
-productRouter.put("/update/:id",userMiddleware,updateProduct)
-productRouter.delete("/delete/:id",userMiddleware,deleteProduct)
+productRouter.post("/create",adminMiddleware,createProduct);
+productRouter.put("/update/:id",adminMiddleware,updateProduct)
+productRouter.delete("/delete/:id",adminMiddleware,deleteProduct)
 
 productRouter.get("/getAllProducts",getAllProducts)
 productRouter.get("/getProductById/:id",getProductById)

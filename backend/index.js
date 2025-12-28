@@ -9,6 +9,7 @@ const redisClient = require('./config/redisDB');
 const productRouter = require('./routes/productRoute');
 const cartRouter = require('./routes/cartRoute');
 const orderRouter = require('./routes/orderRoute');
+const mediaRouter = require('./routes/mediaRouter');
 
 app.use(cors({
     origin: 'http://localhost:5173',
@@ -22,6 +23,7 @@ app.use('/user',authRouter)
 app.use('/product',productRouter)
 app.use('/cart',cartRouter)
 app.use('/order',orderRouter)
+app.use('/media',mediaRouter)
 
 const InitializeConnection = async () => {
     try {

@@ -10,7 +10,7 @@ const createProduct = async (req,res) => {
         })
         res.status(201).json({ message: "Product Created Successfully", product: productInfo });
     } catch (error) {
-        console.error("Error creating product:", error.message);
+        // console.error("Error creating product:", error.message);
         res.status(400).json({ message: "Failed to create product.", error: error.message });
     }
 }
@@ -20,6 +20,7 @@ const createProduct = async (req,res) => {
 const updateProduct = async (req,res) => {
     try {
         const {id} = req.params;
+        const userId = req.result._id;
 
         if(!id)
             return res.status(400).send("Missing ID Fields")
@@ -27,6 +28,11 @@ const updateProduct = async (req,res) => {
         const product = await Product.findById(id)
         if(!product){
             return res.status(404).send("Product not found")
+        }
+
+        // Check if user is the creator or admin
+        if(product.createdBy.toString() !== userId.toString() && req.result.role !== 'admin'){
+            return res.status(403).send("You don't have permission to update this product")
         }
 
         const updatedProduct = await Product.findByIdAndUpdate(id,{...req.body},{runValidators:true,new:true});
@@ -43,10 +49,21 @@ const updateProduct = async (req,res) => {
 const deleteProduct = async (req,res) => {
 
     const { id } = req.params;
+    const userId = req.result._id;
 
     try {
         if(!id){
             return res.status(400).send("ID is Missing")
+        }
+
+        const product = await Product.findById(id)
+        if(!product){
+            return res.status(404).send("Product not found")
+        }
+
+        // Check if user is the creator or admin
+        if(product.createdBy.toString() !== userId.toString() && req.result.role !== 'admin'){
+            return res.status(403).send("You don't have permission to delete this product")
         }
 
         const deletedProduct = await Product.findByIdAndDelete(id)

@@ -14,10 +14,13 @@ const Register = async (req,res)=>{
       const {firstName, emailId, password}  = req.body;
 
       req.body.password = await bcrypt.hash(password, 10);
-      req.body.role = 'user'
+      
+      // Check if this is the first user, make them admin
+      const userCount = await User.countDocuments();
+      req.body.role = userCount === 0 ? 'admin' : 'user';
     
     const user =  await User.create(req.body);
-    const token =  jwt.sign({_id:user._id , emailId:emailId, role:'user'},process.env.JWT_KEY,{expiresIn: 60*60});
+    const token =  jwt.sign({_id:user._id , emailId:emailId, role:user.role},process.env.JWT_KEY,{expiresIn: 60*60});
     const reply = {
         firstName: user.firstName,
         emailId: user.emailId,

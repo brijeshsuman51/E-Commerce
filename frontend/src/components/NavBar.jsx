@@ -7,7 +7,9 @@ import {
   User, 
   LogOut,
   UserCircle,
-  Shield
+  Shield,
+  Plus,
+  Package
 } from 'lucide-react';
 import { logoutUser } from '../authSlice';
 import { fetchCart,clearCart } from '../cartSlice';
@@ -192,6 +194,7 @@ const Navbar = () => {
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account info</p>
                         <p className="text-sm font-black text-gray-800 mt-1">{user.firstName} {user.lastName || ''}</p>
                         <p className="text-xs text-gray-500 truncate">{user.emailId}</p>
+                        <p className="text-xs text-blue-500">Role: {user.role}</p>
                       </div>
 
                       <div className="p-2">
@@ -205,14 +208,41 @@ const Navbar = () => {
                         </NavLink>
 
                         {user.role === 'admin' && (
-                          <NavLink 
-                            to="/admin" 
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-purple-50 hover:text-purple-600 transition-colors group"
-                          >
-                            <Shield className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
-                            Admin Panel
-                          </NavLink>
+                          <>
+                            {/* {console.log('User is admin:', user)} */}
+                            <NavLink 
+                              to="/admin/products" 
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-purple-50 hover:text-purple-600 transition-colors group"
+                            >
+                              <Shield className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
+                              Admin Panel
+                            </NavLink>
+
+                            <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>
+
+                            <div className="px-3 py-1">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Product Management</p>
+                              <div className="space-y-1">
+                                <NavLink 
+                                  to="/admin/products/create" 
+                                  onClick={() => setIsDropdownOpen(false)}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-green-50 hover:text-green-600 transition-colors group"
+                                >
+                                  <Plus className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
+                                  Create Product
+                                </NavLink>
+                                <NavLink 
+                                  to="/admin/products" 
+                                  onClick={() => setIsDropdownOpen(false)}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                                >
+                                  <Package className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                                  Manage Products
+                                </NavLink>
+                              </div>
+                            </div>
+                          </>
                         )}
 
                         <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>

@@ -11,6 +11,10 @@ import Cart from './pages/Cart';
 import Order from './pages/Order';
 import ProductPage from './pages/ProductPage';
 import ProfilePage from './pages/ProfilePage';
+import CreateProduct from './product/CreateProduct';
+import UpdateProduct from './product/UpdateProduct';
+import DeleteProduct from './product/DeleteProduct';
+import AdminProducts from './pages/AdminProducts';
 
 function App() {
   const dispatch = useDispatch();
@@ -32,6 +36,10 @@ function App() {
               <Route path="/orders" element={<Order />} />
               <Route path="/product/:id" element={<ProductPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/admin/products/create" element={<CreateProduct />} />
+              <Route path="/admin/products/update/:id" element={<UpdateProduct />} />
+              <Route path="/admin/products/delete/:id" element={<DeleteProduct />} />
             </Routes>
           </main>
         </div>
