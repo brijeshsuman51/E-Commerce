@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router';
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { checkAuth } from './authSlice';
@@ -15,6 +15,7 @@ import CreateProduct from './product/CreateProduct';
 import UpdateProduct from './product/UpdateProduct';
 import DeleteProduct from './product/DeleteProduct';
 import AdminProducts from './pages/AdminProducts';
+import Category from './pages/CategoryPage';
 
 function App() {
   const dispatch = useDispatch();
@@ -25,9 +26,7 @@ function App() {
   return (
     
       <Router>
-        <div className="min-h-screen flex flex-col">
           <NavBar />
-          <main className="flex-grow">
             <Routes>
               <Route path="/" element={<Homepage />} />
               <Route path="/login" element={<Login />} />
@@ -40,9 +39,8 @@ function App() {
               <Route path="/admin/products/create" element={<CreateProduct />} />
               <Route path="/admin/products/update/:id" element={<UpdateProduct />} />
               <Route path="/admin/products/delete/:id" element={<DeleteProduct />} />
+              <Route path="/category/:categoryName" element={<Category />} />   
             </Routes>
-          </main>
-        </div>
       </Router>
   );
 }

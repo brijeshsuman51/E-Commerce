@@ -35,6 +35,10 @@ const productSchema = new Schema({
         type:String,
         trim:true
     },
+    tags:{
+        type:[String],
+        default:[]
+    },
     rating:{
         type:Number,
         min:0,
