@@ -16,6 +16,7 @@ import UpdateProduct from './product/UpdateProduct';
 import DeleteProduct from './product/DeleteProduct';
 import AdminProducts from './pages/AdminProducts';
 import Category from './pages/CategoryPage';
+import RecomendCategoryPage from './components/RecomendCategory';
 
 function App() {
   const dispatch = useDispatch();
@@ -39,7 +40,8 @@ function App() {
               <Route path="/admin/products/create" element={<CreateProduct />} />
               <Route path="/admin/products/update/:id" element={<UpdateProduct />} />
               <Route path="/admin/products/delete/:id" element={<DeleteProduct />} />
-              <Route path="/category/:categoryName" element={<Category />} />   
+              <Route path="/category/:categoryName" element={<Category />} />
+              <Route path="/recomendcategory/:categoryName" element={<RecomendCategoryPage />} />   
             </Routes>
       </Router>
   );

@@ -45,7 +45,7 @@ const CategoryCard = ({ title, products, type = "single", navigate, categorySlug
         <button 
             onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/category/${categorySlug}`);
+                navigate(`/recomendcategory/${categorySlug}`);
             }}
             className="text-sm text-left text-blue-600 font-semibold hover:text-blue-800 hover:underline mt-4 block"
         >

@@ -7,7 +7,7 @@ import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../cartSlice';
 
-const CategoryPage = () => {
+const RecomendCategoryPage = () => {
   const { categoryName } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -113,52 +113,6 @@ const CategoryPage = () => {
 
   return (
     <div className="min-h-screen bg-blue-50/50">
-      
-      {/* NAVIGATION BAR (Pills) */}
-      <section className="bg-white border-b border-blue-100 sticky top-16 z-30 shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex gap-3 items-center">
-          
-          {/* Back Button */}
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          {/* Filter Button */}
-          <button 
-            onClick={openFilterModal}
-            className="flex items-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg font-medium transition-colors border border-blue-200 whitespace-nowrap"
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filter</span>
-          </button>
-
-          <div className="w-px h-8 bg-gray-200 mx-1"></div>
-
-          {/* Horizontal Category Scroll */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide w-full pb-1" style={{ scrollbarWidth: 'none' }}>
-            <button 
-                onClick={() => navigate('/')}
-                className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
-            >
-                All
-            </button>
-            {categoriesList.map((cat) => (
-              <button 
-                key={cat}
-                onClick={() => navigate(`/category/${cat}`)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${
-                  categoryName === cat 
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:text-blue-600'
-                }`}
-              >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* HEADER */}
       <div className="bg-blue-500 text-white py-8">
         <div className="container mx-auto px-4">
@@ -393,4 +347,4 @@ const CategoryPage = () => {
   );
 };
 
-export default CategoryPage;
+export default RecomendCategoryPage;
