@@ -10,6 +10,11 @@ const Order = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const statuses = ['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+  const filteredOrders = orders.filter(o => statusFilter === 'all' || o.status === statusFilter);
 
   useEffect(() => {
     if (!user) {
@@ -66,9 +71,7 @@ const Order = () => {
     }
   };
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   if (loading) {
     return (
@@ -115,40 +118,73 @@ const Order = () => {
             </button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {orders.map((order) => (
-              <div key={order._id} className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(order.status)}
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Order #{order._id.slice(-8)}</h3>
-                      <p className="text-sm text-gray-600">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-gray-900">${order.totalAmount.toFixed(2)}</p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
-                  </div>
-                </div>
+          <>
+            {/* Filter Buttons */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-wrap gap-2">
+                {statuses.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStatusFilter(s)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                      statusFilter === s
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="text-sm text-gray-500">
+                Showing: {statusFilter === 'all' ? 'All' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+              </div>
+            </div>
 
-                <div className="border-t border-gray-100 pt-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Items</h4>
-                  <div className="space-y-3">
-                    {order.products.map((item, index) => (
-                      <div key={index} className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                          {order.products.map((item, index) => (
+            {/* Orders List */}
+            {filteredOrders.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-gray-600">No orders match the selected status.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {filteredOrders.map((order) => (
+                  <div key={order._id} className="bg-white rounded-lg shadow-sm p-6">
+                    {/* Order Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        {getStatusIcon(order.status)}
+                        <div>
+                          <h3 className="font-semibold text-gray-900">Order #{order._id.slice(-8)}</h3>
+                          <p className="text-sm text-gray-600">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-gray-900">${order.totalAmount.toFixed(2)}</p>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                            order.status
+                          )}`}
+                        >
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Order Items */}
+                    <div className="border-t border-gray-100 pt-4">
+                      <h4 className="font-semibold text-gray-900 mb-3">Items</h4>
+                      <div className="space-y-3">
+                        {order.products.map((item, index) => (
                           <div key={index} className="flex items-center gap-4">
+                            {/* Product Image */}
                             <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                               {item.productId && item.productId.images && item.productId.images.length > 0 ? (
                                 <img
                                   src={item.productId.images[0]}
-                                  alt={item.name || item.productId?.name || 'Product Image'} 
+                                  alt={item.name || item.productId?.name || 'Product'}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
@@ -157,6 +193,8 @@ const Order = () => {
                                 </div>
                               )}
                             </div>
+                            
+                            {/* Product Details */}
                             <div className="flex-1">
                               <h5 className="font-medium text-gray-900">
                                 {item.name || (item.productId ? item.productId.name : 'Product Unavailable')}
@@ -165,6 +203,8 @@ const Order = () => {
                                 Quantity: {item.quantity} × ${item.price}
                               </p>
                             </div>
+                            
+                            {/* Price Calculation */}
                             <div className="text-right">
                               <p className="font-semibold text-gray-900">
                                 ${(item.price * item.quantity).toFixed(2)}
@@ -172,34 +212,23 @@ const Order = () => {
                             </div>
                           </div>
                         ))}
-                        </div>
-                        <div className="flex-1">
-                          <h5 className="font-medium text-gray-900">{item.name || (item.productId ? item.productId.name : 'Product Unavailable')}</h5>
-                          <p className="text-sm text-gray-600">
-                            Quantity: {item.quantity} × ${item.price}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
 
-                {order.shippingAddress && (
-                  <div className="border-t border-gray-100 pt-4 mt-4">
-                    <h4 className="font-semibold text-gray-900 mb-2">Shipping Address</h4>
-                    <p className="text-sm text-gray-600">
-                      {order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}, {order.shippingAddress.country}
-                    </p>
+                    {/* Shipping Address */}
+                    {order.shippingAddress && (
+                      <div className="border-t border-gray-100 pt-4 mt-4">
+                        <h4 className="font-semibold text-gray-900 mb-2">Shipping Address</h4>
+                        <p className="text-sm text-gray-600">
+                          {order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}, {order.shippingAddress.country}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

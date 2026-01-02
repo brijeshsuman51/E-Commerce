@@ -143,6 +143,9 @@ const Homepage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
+  const featuredScrollRef = useRef(null);
+
   const categoriesList = ['electronics','clothing','books','home','sports','beauty','toys','automotive'];
 
   const [filters, setFilters] = useState({
@@ -196,6 +199,15 @@ const Homepage = () => {
 
   const handleCategoryClick = (category) => {
     navigate(`/category/${category.toLowerCase()}`);
+  };
+
+
+  const scrollFeatured = (direction) => {
+    if (featuredScrollRef.current) {
+      const { current } = featuredScrollRef;
+      const scrollAmount = direction === 'left' ? -500 : 500;
+      current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
   };
 
   const openFilterModal = () => {
@@ -331,6 +343,7 @@ const Homepage = () => {
                     {user ? `Welcome back, ${user.firstName}` : 'Sign in securely'}
                 </button>
             </div>
+            {/* SponserShip logo */}
             {products[0] && (
                <div className="mt-4 bg-blue-50 rounded-lg p-4 text-center">
                     <img src={products[0]?.images?.[0]} className="w-full h-24 object-contain mx-auto" alt="Deal" />
@@ -343,14 +356,25 @@ const Homepage = () => {
       </div>
 
       {/* FEATURED PRODUCTS */}
-      <section id="featured-products" className="py-8 container mx-auto px-4">
+      <section id="featured-products" className="py-8 container mx-auto px-4 relative group">
         <div className="flex items-center justify-between mb-8">
            <h2 className="text-2xl font-bold text-gray-900">Featured Products</h2>
-           {(filters.category || filters.brand || filters.minPrice) && (
-             <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-               Showing filtered results
-             </span>
-           )}
+           
+           <div className="flex items-center gap-4">
+             {(filters.category || filters.brand || filters.minPrice) && (
+               <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                 Showing filtered results
+               </span>
+             )}
+             
+
+             <button 
+               onClick={() => navigate('/featured')} 
+               className="text-blue-600 font-semibold hover:text-blue-800 flex items-center gap-1 hover:underline"
+             >
+               See All Products <ChevronRight className="w-4 h-4" />
+             </button>
+           </div>
         </div>
         
         {loading ? (
@@ -363,65 +387,85 @@ const Homepage = () => {
             <p>{error}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <div key={product._id} className="group bg-white border border-blue-100 rounded-xl p-4 shadow-sm hover:shadow-xl transition-all duration-300">
-                <div 
-                  className="relative bg-gray-50 w-full h-60 rounded-lg mb-4 overflow-hidden cursor-pointer flex items-center justify-center"
-                  onClick={() => navigate(`/product/${product._id}`)}
-                >
-                  {product.images && product.images.length > 0 ? (
-                    <img 
-                      src={product.images[0]} 
-                      alt={product.name}
-                      className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <ShoppingBag className="w-12 h-12 text-gray-300" />
-                  )}
-                  {product.stock <= 5 && product.stock > 0 && (
-                    <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-sm">
-                      Only {product.stock} left!
-                    </span>
-                  )}
-                </div>
+          <div className="relative">
+             <button 
+               onClick={() => scrollFeatured('left')}
+               className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 border border-gray-200 p-2 rounded-full shadow-lg text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white -ml-4"
+             >
+               <ChevronLeft className="w-6 h-6" />
+             </button>
+             
+             <button 
+               onClick={() => scrollFeatured('right')}
+               className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 border border-gray-200 p-2 rounded-full shadow-lg text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white -mr-4"
+             >
+               <ChevronRight className="w-6 h-6" />
+             </button>
 
-                <div className="text-left">
-                  <p className="text-xs text-blue-500 font-bold uppercase tracking-wider mb-1">
-                    {product.category}
-                  </p>
-                  <h3 
-                    className="font-bold text-gray-900 truncate mb-1 cursor-pointer hover:text-blue-600 transition-colors" 
-                    title={product.name}
-                    onClick={() => navigate(`/product/${product._id}`)}
-                  >
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center mb-3">
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating || 4) ? 'fill-current' : 'text-gray-300'}`} />
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xl font-bold text-gray-900">${product.price}</span>
-                    <button 
-                      disabled={product.stock === 0}
-                      onClick={() => handleAddToCart(product._id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm ${
-                        product.stock === 0 
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                        : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                      }`}
-                    >
-                      {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+             <div 
+               ref={featuredScrollRef}
+               className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide scroll-smooth"
+               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+             >
+               {filteredProducts.map((product) => (
+                 <div key={product._id} className="min-w-[280px] w-[280px] group/card bg-white border border-blue-100 rounded-xl p-4 shadow-sm hover:shadow-xl transition-all duration-300">
+                   <div 
+                     className="relative bg-gray-50 w-full h-60 rounded-lg mb-4 overflow-hidden cursor-pointer flex items-center justify-center"
+                     onClick={() => navigate(`/product/${product._id}`)}
+                   >
+                     {product.images && product.images.length > 0 ? (
+                       <img 
+                         src={product.images[0]} 
+                         alt={product.name}
+                         className="w-full h-full object-contain p-4 group-hover/card:scale-105 transition-transform duration-300"
+                       />
+                     ) : (
+                       <ShoppingBag className="w-12 h-12 text-gray-300" />
+                     )}
+                     {product.stock <= 5 && product.stock > 0 && (
+                       <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-sm">
+                         Only {product.stock} left!
+                       </span>
+                     )}
+                   </div>
+
+                   <div className="text-left">
+                     <p className="text-xs text-blue-500 font-bold uppercase tracking-wider mb-1">
+                       {product.category}
+                     </p>
+                     <h3 
+                       className="font-bold text-gray-900 truncate mb-1 cursor-pointer hover:text-blue-600 transition-colors" 
+                       title={product.name}
+                       onClick={() => navigate(`/product/${product._id}`)}
+                     >
+                       {product.name}
+                     </h3>
+                     <div className="flex items-center mb-3">
+                       <div className="flex text-yellow-400">
+                         {[...Array(5)].map((_, i) => (
+                           <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating || 4) ? 'fill-current' : 'text-gray-300'}`} />
+                         ))}
+                       </div>
+                     </div>
+                     
+                     <div className="flex items-center justify-between mt-2">
+                       <span className="text-xl font-bold text-gray-900">${product.price}</span>
+                       <button 
+                         disabled={product.stock === 0}
+                         onClick={() => handleAddToCart(product._id)}
+                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm ${
+                           product.stock === 0 
+                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                           : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                         }`}
+                       >
+                         {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               ))}
+             </div>
           </div>
         )}
       </section>

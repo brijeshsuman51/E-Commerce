@@ -22,8 +22,8 @@ const adminMiddleware = async (req,res,next) => {
     if(!result)
         throw new Error("User doesn`t found")
 
-    if(payload.role!='admin' && payload.role!='user')
-        throw new Error('Please Registered By Admin')
+    if(payload.role !== 'admin')
+        throw new Error('Admin access required')
 
     const IsBlocked = await redisClient.exists(`token:${token}`)
 
@@ -31,13 +31,11 @@ const adminMiddleware = async (req,res,next) => {
         throw new Error("Invalid token")
 
     req.result = result;
-    
 
     next()
-    
-        
+
     } catch (error) {
-        res.send("Error:",error.message)
+        res.status(401).send(error.message)
     }
 }
 

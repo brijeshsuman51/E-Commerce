@@ -17,6 +17,8 @@ import DeleteProduct from './product/DeleteProduct';
 import AdminProducts from './pages/AdminProducts';
 import Category from './pages/CategoryPage';
 import RecomendCategoryPage from './components/RecomendCategory';
+import FeaturedProducts from './pages/FeaturedProducts';
+import AdminOrders from './pages/AdminOrders';
 
 function App() {
   const dispatch = useDispatch();
@@ -42,6 +44,8 @@ function App() {
               <Route path="/admin/products/delete/:id" element={<DeleteProduct />} />
               <Route path="/category/:categoryName" element={<Category />} />
               <Route path="/recomendcategory/:categoryName" element={<RecomendCategoryPage />} />   
+              <Route path="/featured" element={<FeaturedProducts />} />
+              <Route path="/admin/orders" element={<AdminOrders />} />
             </Routes>
       </Router>
   );

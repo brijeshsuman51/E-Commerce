@@ -29,7 +29,7 @@ const createOrder = async (req,res) => {
                 price: price,
                 name: product.name
             })
-            // Decrease stock
+
             product.stock -= item.quantity;
             await product.save();
         }
@@ -67,27 +67,39 @@ const getUserOrders = async (req,res) => {
     }
 }
 
-// Update Order Status 
 
-const updateOrderStatus = async (req,res) => {
+// Get All Orders (Admin)
+const getAllOrders = async (req, res) => {
     try {
-        const {id} = req.params;
-        const {status} = req.body;
-
-        if(!id || !status){
-            return res.status(400).send('Order ID and status are required')
-        }
-
-        const order = await Order.findByIdAndUpdate(id, {status}, {new:true})
-        if(!order){
-            return res.status(404).send('Order not found')
-        }
-        res.status(200).json(order)
+        const orders = await Order.find().populate('userId', 'firstName email').populate('products.productId', 'name price images').sort({createdAt: -1});
+        res.status(200).json(orders);
     } catch (error) {
-        res.status(400).send("Error:"+error.message)
+        res.status(400).send("Error:" + error.message)
     }
 }
 
 
+// Admin: update status 
+const updateOrdersStatusByUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { status } = req.body;
 
-module.exports = {createOrder, getUserOrders, updateOrderStatus}
+        if (!userId) return res.status(400).send('userId is required');
+        if (!status) return res.status(400).send('status is required');
+
+        const allowed = ['pending','processing','shipped','delivered','cancelled'];
+        if (!allowed.includes(status)) return res.status(400).send('Invalid status');
+
+        const result = await Order.updateMany({ userId }, { $set: { status } });
+
+        const updatedOrders = await Order.find({ userId }).populate('userId', 'firstName email').populate('products.productId', 'name price images').sort({createdAt: -1});
+
+        res.status(200).json({ modifiedCount: result.modifiedCount ?? result.nModified ?? 0, updatedOrders });
+    } catch (error) {
+        res.status(400).send('Error:' + error.message);
+    }
+}
+
+
+module.exports = {createOrder, getUserOrders, getAllOrders, updateOrdersStatusByUser}

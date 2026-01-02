@@ -9,7 +9,8 @@ import {
   UserCircle,
   Shield,
   Plus,
-  Package
+  Package,
+  ClipboardList
 } from 'lucide-react';
 import { logoutUser } from '../authSlice';
 import { fetchCart,clearCart } from '../cartSlice';
@@ -207,6 +208,15 @@ const Navbar = () => {
                           My Profile
                         </NavLink>
 
+                        <NavLink 
+                          to="/orders"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                        >
+                          <ClipboardList className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                          My Orders
+                        </NavLink>
+
                         {user.role === 'admin' && (
                           <>
                             {/* {console.log('User is admin:', user)} */}
@@ -217,6 +227,15 @@ const Navbar = () => {
                             >
                               <Shield className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
                               Admin Panel
+                            </NavLink>
+
+                            <NavLink
+                              to="/admin/orders"
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                            >
+                              <ClipboardList className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                              User Orders
                             </NavLink>
 
                             <div className="h-[1px] bg-gray-50 my-2 mx-2"></div>
