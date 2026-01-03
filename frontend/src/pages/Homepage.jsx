@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   ShoppingBag, Star, Truck, Shield, Loader2, ChevronLeft, ChevronRight, 
-  Filter, X, Check, ShoppingCart 
+  Filter, X, Check, Plus, ShoppingCart 
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
@@ -160,6 +160,10 @@ const Homepage = () => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState({...filters});
   const [activeTab, setActiveTab] = useState('category');
+  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
+  const [sponsorSelectedIds, setSponsorSelectedIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sponsoredIds') || '[]') } catch { return [] }
+  });
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -248,6 +252,20 @@ const Homepage = () => {
   });
 
   const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+
+  const openSponsorModal = () => setIsSponsorModalOpen(true);
+  const closeSponsorModal = () => setIsSponsorModalOpen(false);
+  const toggleSponsorId = (id) => {
+    setSponsorSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+  const saveSponsorSelection = () => {
+    try { localStorage.setItem('sponsoredIds', JSON.stringify(sponsorSelectedIds)); } catch {}
+    setIsSponsorModalOpen(false);
+  }
+  const clearSponsorSelection = () => {
+    setSponsorSelectedIds([]);
+    try { localStorage.removeItem('sponsoredIds'); } catch {}
+  }
 
 
   const electronics = products.filter(p => p.category?.toLowerCase().includes('electronic') || p.category?.toLowerCase().includes('tech'));
@@ -343,12 +361,39 @@ const Homepage = () => {
                     {user ? `Welcome back, ${user.firstName}` : 'Sign in securely'}
                 </button>
             </div>
-            {/* SponserShip logo */}
+            {/* Sponsorship logo with add button */}
             {products[0] && (
-               <div className="mt-4 bg-blue-50 rounded-lg p-4 text-center">
-                    <img src={products[0]?.images?.[0]} className="w-full h-24 object-contain mx-auto" alt="Deal" />
-                    <p className="text-blue-600 font-bold mt-2">Deal of the Day</p>
-                    <span className="text-xs text-gray-500">Ends in 02:45:12</span>
+               <div className="mt-4 bg-blue-50 rounded-lg p-4 text-center relative">
+                    {/* Add button */}
+                    <button onClick={(e) => { e.stopPropagation(); openSponsorModal(); }} className="absolute right-3 top-3 bg-white p-2 rounded-full shadow hover:bg-gray-100">
+                      <Plus className="w-4 h-4 text-blue-600" />
+                    </button>
+
+                    {/* Main featured image (first selected or fallback) */}
+                    {(() => {
+                      const mainId = sponsorSelectedIds && sponsorSelectedIds.length ? sponsorSelectedIds[0] : null;
+                      const mainProduct = mainId ? products.find(p => p._id === mainId) : products[0];
+                      return (
+                        <>
+                          <img src={mainProduct?.images?.[0]} className="w-full h-24 object-contain mx-auto" alt="Deal" />
+                          <p className="text-blue-600 font-bold mt-2">Deal of the Day</p>
+                          <span className="text-xs text-gray-500">Ends in 02:45:12</span>
+                        </>
+                      )
+                    })()}
+
+                    {/* Thumbnails of selected sponsored products */}
+                    {sponsorSelectedIds && sponsorSelectedIds.length > 0 && (
+                      <div className="mt-3 flex items-center justify-center gap-2 overflow-x-auto px-2">
+                        {sponsorSelectedIds.map(id => {
+                          const p = products.find(x => x._id === id);
+                          if(!p) return null;
+                          return (
+                            <img key={id} src={p.images?.[0]} alt={p.name} title={p.name} className="w-12 h-12 object-contain rounded-md border bg-white p-1" />
+                          )
+                        })}
+                      </div>
+                    )}
                </div>
             )}
           </div>
@@ -693,6 +738,44 @@ const Homepage = () => {
                 </div>
               </div>
             )}
+
+      {isSponsorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-bold">Select Products for Sponsorship</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={clearSponsorSelection} className="text-sm text-red-600 hover:underline">Clear</button>
+                <button onClick={closeSponsorModal} className="text-gray-500 hover:text-gray-700">Cancel</button>
+              </div>
+            </div>
+
+            <div className="p-4 overflow-y-auto">
+              <p className="text-sm text-gray-600 mb-3">Click products to toggle selection. Selected items will appear under the sponsorship logo.</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {products.map(p => {
+                  const checked = sponsorSelectedIds.includes(p._id);
+                  return (
+                    <label key={p._id} className={`border rounded-lg p-2 cursor-pointer flex flex-col items-center text-center ${checked ? 'border-blue-600 bg-blue-50' : 'bg-white'}`}>
+                      <input type="checkbox" className="hidden" checked={checked} onChange={() => toggleSponsorId(p._id)} />
+                      <img src={p.images?.[0]} alt={p.name} className="w-full h-28 object-contain mb-2" />
+                      <div className="text-sm font-medium text-gray-900 line-clamp-1">{p.name}</div>
+                      <div className="text-sm text-gray-600">${p.price}</div>
+                      <div className="mt-2">
+                        {checked ? <Check className="w-4 h-4 text-blue-600" /> : <div className="w-4 h-4" />}
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="p-4 border-t flex justify-end gap-3 bg-gray-50">
+              <button onClick={saveSponsorSelection} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Selection</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
