@@ -2,16 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Edit3,
-  Save,
-  X,
-  Loader2,
-  AlertCircle,
-  CheckCircle
+  User, Mail, Phone, MapPin, Edit3,
+  Save, X, Loader2, AlertCircle, CheckCircle
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { updateUser } from '../authSlice';
@@ -56,7 +48,7 @@ const ProfilePage = () => {
       const userData = response.data.user;
       setProfile(userData);
 
-      // Initialize form data
+
       setFormData({
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
@@ -98,7 +90,6 @@ const ProfilePage = () => {
 
   const handleSave = async () => {
     try {
-      // Basic validation
       if (!formData.firstName || formData.firstName.trim().length < 3) {
         setError('First name must be at least 3 characters long');
         return;
@@ -118,14 +109,13 @@ const ProfilePage = () => {
 
       const response = await axiosClient.put('/user/updateprofile', formData);
 
-      // Update the profile state and Redux store
       setProfile(response.data.user);
       dispatch(updateUser(response.data.user));
 
       setSuccess(true);
       setIsEditing(false);
 
-      // Hide success message after 3 seconds
+
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Profile update error:', err);
@@ -136,7 +126,6 @@ const ProfilePage = () => {
   };
 
   const handleCancel = () => {
-    // Reset form data to current profile values
     setFormData({
       firstName: profile.firstName || '',
       lastName: profile.lastName || '',
@@ -184,7 +173,6 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
@@ -445,6 +433,54 @@ const ProfilePage = () => {
               <div className="text-sm text-gray-600">Account Type</div>
             </div>
           </div>
+        </div>
+
+        {/* Search History */}
+        <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Search History</h2>
+          {profile.searchHistory && profile.searchHistory.length > 0 ? (
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {profile.searchHistory.slice().reverse().map((search, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{search.query}</p>
+                    {search.category && (
+                      <p className="text-xs text-blue-600">Category: {search.category}</p>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(search.timestamp).toLocaleDateString()} {new Date(search.timestamp).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No search history available</p>
+          )}
+        </div>
+
+        {/* Clicked Products */}
+        <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recently Viewed Products</h2>
+          {profile.clickedProducts && profile.clickedProducts.length > 0 ? (
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {profile.clickedProducts.slice().reverse().map((click, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{click.productName}</p>
+                    {click.productCategory && (
+                      <p className="text-xs text-blue-600">Category: {click.productCategory}</p>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(click.clickedAt).toLocaleDateString()} {new Date(click.clickedAt).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No product views recorded</p>
+          )}
         </div>
       </div>
     </div>

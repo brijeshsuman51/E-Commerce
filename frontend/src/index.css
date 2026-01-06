@@ -1,1 +1,70 @@
 @import "tailwindcss";
+
+/* Custom animations for sales section */
+/* @keyframes countdown-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes sale-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+  }
+}
+
+@keyframes sponsored-shine {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+} */
+
+/* .animate-countdown-pulse {
+  animation: countdown-pulse 2s ease-in-out infinite;
+}
+
+.animate-sale-glow {
+  animation: sale-glow 3s ease-in-out infinite;
+}
+
+.animate-sponsored-shine {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 200% 100%;
+  animation: sponsored-shine 2s infinite;
+} */
+
+/* Enhanced scrollbar styling */
+/* .scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+} */
+
+/* Line clamp utilities */
+/* .line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+} */

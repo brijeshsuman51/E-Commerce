@@ -14,8 +14,7 @@ const Register = async (req,res)=>{
       const {firstName, emailId, password}  = req.body;
 
       req.body.password = await bcrypt.hash(password, 10);
-      
-      // Check if this is the first user, make them admin
+
       const userCount = await User.countDocuments();
       req.body.role = userCount === 0 ? 'admin' : 'user';
     
@@ -137,7 +136,7 @@ const getUserProfile = async (req, res) => {
                 path: 'cart.productId',
                 select: 'title price image category' 
             })
-            .populate('orders') 
+            .populate('orders')
             .select('-password');
         
         if (!user) {
@@ -147,7 +146,9 @@ const getUserProfile = async (req, res) => {
         res.json({
             user: user,
             cartCount: user.cart ? user.cart.length : 0,
-            orderCount: user.orders ? user.orders.length : 0
+            orderCount: user.orders ? user.orders.length : 0,
+            searchHistoryCount: user.searchHistory ? user.searchHistory.length : 0,
+            clickedProductsCount: user.clickedProducts ? user.clickedProducts.length : 0
         });
     } catch (error) {
         res.status(400).send("Error: " + error.message);
@@ -202,4 +203,76 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
-module.exports = {Register,Login,Logout,deleteProfile,checkUser,getUserProfile,updateUserProfile};
+// Add Search History
+const addSearchHistory = async (req, res) => {
+    try {
+        const userId = req.result._id;
+        const { query, category } = req.body;
+
+        if (!query || query.trim() === '') {
+            return res.status(400).send("Search query is required");
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        const newSearch = {
+            query: query.trim(),
+            category: category || '',
+            timestamp: new Date()
+        };
+
+        user.searchHistory.unshift(newSearch);
+        if (user.searchHistory.length > 50) {
+            user.searchHistory = user.searchHistory.slice(0, 50);
+        }
+
+        await user.save();
+
+        res.json({ message: "Search history updated successfully" });
+    } catch (error) {
+        res.status(400).send("Error: " + error.message);
+    }
+};
+
+// Add Clicked Product History
+
+const addClickedProduct = async (req, res) => {
+    try {
+        const userId = req.result._id;
+        const { productId, productName, productCategory } = req.body;
+
+        if (!productId) {
+            return res.status(400).send("Product ID is required");
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        const newClick = {
+            productId,
+            productName: productName || '',
+            productCategory: productCategory || '',
+            clickedAt: new Date()
+        };
+
+
+        user.clickedProducts.unshift(newClick);
+        if (user.clickedProducts.length > 100) {
+            user.clickedProducts = user.clickedProducts.slice(0, 100);
+        }
+
+        
+        await user.save();
+
+        res.json({ message: "Product click tracked successfully" });
+    } catch (error) {
+        res.status(400).send("Error: " + error.message);
+    }
+};
+
+module.exports = {Register,Login,Logout,deleteProfile,checkUser,getUserProfile,updateUserProfile,addSearchHistory,addClickedProduct};

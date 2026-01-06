@@ -1,16 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Package,
-  Plus,
-  Edit,
-  Trash2,
-  Search,
-  Loader2,
-  AlertCircle,
-  Star,
-  Eye
-} from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Search, Loader2, Star, Eye, Zap, X } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 
 const AdminProducts = () => {
@@ -21,21 +11,34 @@ const AdminProducts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const categories = [
-    'all',
-    'electronics',
-    'clothing',
-    'books',
-    'home',
-    'sports',
-    'beauty',
-    'toys',
-    'automotive'
-  ];
+  
+  const [showFlashModal, setShowFlashModal] = useState(false);
+  const [selectedFlashProduct, setSelectedFlashProduct] = useState(null);
+  const [flashConfig, setFlashConfig] = useState({
+    endTime: '',
+    discount: 20
+  });
+  const [currentFlashId, setCurrentFlashId] = useState(null);
+
+  const categories = ['all', 'electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys', 'automotive'];
 
   useEffect(() => {
     fetchProducts();
+    loadFlashSaleData();
   }, []);
+
+  const loadFlashSaleData = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem('FLASH_SALE_DATA'));
+      if (data && new Date(data.endTime) > new Date()) {
+        setCurrentFlashId(data.productId);
+      } else {
+        setCurrentFlashId(null);
+      }
+    } catch (e) {
+      setCurrentFlashId(null);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -43,7 +46,6 @@ const AdminProducts = () => {
       const response = await axiosClient.get('/product/getAllProducts');
       setProducts(response.data);
     } catch (error) {
-      // console.error('Fetch products error:', error);
       setError('Failed to fetch products');
     } finally {
       setLoading(false);
@@ -51,17 +53,48 @@ const AdminProducts = () => {
   };
 
   const handleDelete = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
     try {
       await axiosClient.delete(`/product/delete/${productId}`);
       setProducts(prev => prev.filter(product => product._id !== productId));
     } catch (error) {
-      // console.error('Delete product error:', error);
       setError('Failed to delete product');
     }
+  };
+
+  const openFlashModal = (product) => {
+    setSelectedFlashProduct(product);
+    const tomorrow = new Date();
+    tomorrow.setHours(tomorrow.getHours() + 24);
+    tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
+    
+    setFlashConfig({
+      endTime: tomorrow.toISOString().slice(0, 16),
+      discount: 20
+    });
+    setShowFlashModal(true);
+  };
+
+  const saveFlashSale = () => {
+    if (!selectedFlashProduct || !flashConfig.endTime) return;
+
+    const saleData = {
+      productId: selectedFlashProduct._id,
+      endTime: flashConfig.endTime,
+      discount: flashConfig.discount,
+      startTime: new Date().toISOString()
+    };
+
+    localStorage.setItem('FLASH_SALE_DATA', JSON.stringify(saleData));
+    setCurrentFlashId(selectedFlashProduct._id);
+    setShowFlashModal(false);
+    alert(`Sale started for ${selectedFlashProduct.name}!`);
+  };
+
+  const removeFlashSale = () => {
+    localStorage.removeItem('FLASH_SALE_DATA');
+    setCurrentFlashId(null);
+    alert('Active sale removed.');
   };
 
   const filteredProducts = products.filter(product => {
@@ -71,190 +104,151 @@ const AdminProducts = () => {
     return matchesSearch && matchesCategory;
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading products...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin w-10 h-10 text-blue-600" /></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Package className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
-                <p className="text-gray-600">Manage your store products</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/admin/products/create')}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Product
-            </button>
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Package className="text-blue-600" /> Product Admin
+            </h1>
+            <p className="text-gray-500">Manage products and set Sales</p>
+          </div>
+          <div className="flex gap-3">
+             {currentFlashId && (
+                <button onClick={removeFlashSale} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium transition-colors">
+                    Stop Current Sale
+                </button>
+             )}
+             <button onClick={() => navigate('/admin/products/create')} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700">
+               <Plus size={18} /> Add Product
+             </button>
           </div>
         </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-lg">
-            <AlertCircle className="w-5 h-5" />
-            {error}
-          </div>
-        )}
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Category Filter */}
-            <div>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="flex gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+            <input 
+              type="text" 
+              placeholder="Search products..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none" 
+            />
           </div>
+          <select 
+            value={selectedCategory} 
+            onChange={e => setSelectedCategory(e.target.value)}
+            className="px-4 py-2 rounded-lg border outline-none"
+          >
+            {categories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+          </select>
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <div key={product._id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-              {/* Product Image */}
-              <div className="aspect-square bg-gray-100 relative">
-                {product.images && product.images.length > 0 ? (
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No Image
-                  </div>
+        {/* Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredProducts.map(product => (
+            <div key={product._id} className={`bg-white rounded-xl shadow-sm overflow-hidden border-2 transition-all ${currentFlashId === product._id ? 'border-orange-500 ring-2 ring-orange-200' : 'border-transparent'}`}>
+              <div className="relative h-48 bg-gray-100 p-4">
+                <img src={product.images?.[0]} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                {currentFlashId === product._id && (
+                    <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg animate-pulse">
+                        <Zap size={12} fill="currentColor" /> ACTIVE SALE
+                    </div>
                 )}
-
-                {/* Stock Badge */}
-                <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium ${
-                  product.stock > 10 ? 'bg-green-100 text-green-800' :
-                  product.stock > 0 ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                </div>
               </div>
-
-              {/* Product Info */}
+              
               <div className="p-4">
-                <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
-                  {product.name}
-                </h3>
-
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg font-bold text-blue-600">
-                    ${product.price}
-                  </span>
-                  <span className="text-sm text-gray-500 capitalize">
-                    {product.category}
-                  </span>
+                <h3 className="font-bold text-gray-800 line-clamp-1">{product.name}</h3>
+                <p className="text-gray-500 text-sm mb-2">{product.category}</p>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-bold text-blue-600">${product.price}</span>
+                  <div className="flex items-center text-yellow-400 text-sm">
+                    <Star size={14} fill="currentColor" /> {product.rating}
+                  </div>
                 </div>
 
-                {product.brand && (
-                  <p className="text-sm text-gray-600 mb-2">{product.brand}</p>
-                )}
-
-                {/* Rating */}
-                <div className="flex items-center gap-1 mb-3">
-                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                  <span className="text-sm text-gray-600">
-                    {product.rating} ({product.numReviews})
-                  </span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => navigate(`/product/${product._id}`)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View
-                  </button>
-                  <button
-                    onClick={() => navigate(`/admin/products/update/${product._id}`)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors text-sm"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(product._id)}
-                    className="flex items-center justify-center gap-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors text-sm"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="grid grid-cols-4 gap-2">
+                   <button onClick={() => navigate(`/product/${product._id}`)} className="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-gray-600 flex justify-center"><Eye size={18} /></button>
+                   <button onClick={() => navigate(`/admin/products/update/${product._id}`)} className="bg-blue-100 hover:bg-blue-200 p-2 rounded-lg text-blue-600 flex justify-center"><Edit size={18} /></button>
+                   <button onClick={() => handleDelete(product._id)} className="bg-red-100 hover:bg-red-200 p-2 rounded-lg text-red-600 flex justify-center"><Trash2 size={18} /></button>
+                   
+                   <button 
+                     onClick={() => openFlashModal(product)} 
+                     title="Set as Sale Product"
+                     className={`p-2 rounded-lg flex justify-center transition-colors ${currentFlashId === product._id ? 'bg-orange-500 text-white' : 'bg-orange-100 hover:bg-orange-200 text-orange-600'}`}
+                   >
+                     <Zap size={18} fill={currentFlashId === product._id ? "currentColor" : "none"} />
+                   </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
-
-        {/* No Products */}
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-12">
-            <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-600">
-              {searchQuery || selectedCategory !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Get started by adding your first product'
-              }
-            </p>
-            {!searchQuery && selectedCategory === 'all' && (
-              <button
-                onClick={() => navigate('/admin/products/create')}
-                className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Product
-              </button>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* Sale Modal */}
+      {showFlashModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4 text-white flex justify-between items-center">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <Zap fill="currentColor" /> Configure Sale
+              </h3>
+              <button onClick={() => setShowFlashModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
+            </div>
+            
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                 <img src={selectedFlashProduct?.images?.[0]} alt="" className="w-16 h-16 object-contain bg-gray-50 rounded-lg border" />
+                 <div>
+                    <p className="font-bold text-gray-800 line-clamp-1">{selectedFlashProduct?.name}</p>
+                    <p className="text-sm text-gray-500">Current Price: ${selectedFlashProduct?.price}</p>
+                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sale End Time</label>
+                  <input 
+                    type="datetime-local" 
+                    value={flashConfig.endTime}
+                    onChange={e => setFlashConfig({...flashConfig, endTime: e.target.value})}
+                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Discount Percentage (%)</label>
+                  <input 
+                    type="number" 
+                    min="1" max="99"
+                    value={flashConfig.discount}
+                    onChange={e => setFlashConfig({...flashConfig, discount: e.target.value})}
+                    className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
+                </div>
+                
+                <div className="bg-orange-50 p-3 rounded-lg border border-orange-100 text-sm text-orange-800">
+                    <p><strong>New Price:</strong> ${(selectedFlashProduct?.price * (1 - flashConfig.discount / 100)).toFixed(2)}</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={saveFlashSale}
+                className="w-full mt-6 bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 rounded-lg font-bold shadow-lg hover:shadow-orange-500/30 transition-all active:scale-95"
+              >
+                Launch Sale
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

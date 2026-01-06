@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Upload, X, Loader2, AlertCircle, CheckCircle, Plus } from 'lucide-react';
+import { Package, Upload, X, Loader2, AlertCircle, CheckCircle, Plus, Star } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import axios from 'axios';
 
@@ -18,7 +18,8 @@ const CreateProduct = () => {
     price: '',
     category: '',
     stock: '',
-    brand: ''
+    brand: '',
+    rating: 0
   });
 
   const categories = ['electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys', 'automotive'];
@@ -35,7 +36,6 @@ const CreateProduct = () => {
       const signatureResponse = await axiosClient.get('/media/image/create');
       // console.log('Signature Response:', signatureResponse.data); 
 
-      // Check if backend returned an error (e.g., missing env vars)
       if (signatureResponse.data.error) {
         throw new Error(signatureResponse.data.error);
       }
@@ -229,6 +229,42 @@ const CreateProduct = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Brand</label>
               <input type="text" name="brand" value={formData.brand} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter brand name" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Initial Rating (Optional)</label>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, rating: star }))}
+                      className="focus:outline-none"
+                    >
+                      <Star
+                        className={`w-6 h-6 ${
+                          star <= formData.rating
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <span className="text-sm text-gray-600 ml-2">
+                  {formData.rating > 0 ? `${formData.rating} star${formData.rating !== 1 ? 's' : ''}` : 'Not rated'}
+                </span>
+                {formData.rating > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, rating: 0 }))}
+                    className="text-sm text-red-600 hover:text-red-800"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="md:col-span-2">

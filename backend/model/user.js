@@ -72,6 +72,42 @@ const userSchema = new Schema({
             ref:'order'
         }],
         default:[]
+    },
+    searchHistory:{
+        type:[{
+            query:{
+                type:String,
+                required:true
+            },
+            timestamp:{
+                type:Date,
+                default:Date.now
+            },
+            category:{
+                type:String,
+                default:''
+            }
+        }],
+        default:[]
+    },
+    clickedProducts:{
+        type:[{
+            productId:{
+                type:Schema.Types.ObjectId,
+                ref:'product'
+            },
+            clickedAt:{
+                type:Date,
+                default:Date.now
+            },
+            productName:{
+                type:String
+            },
+            productCategory:{
+                type:String
+            }
+        }],
+        default:[]
     }
 },{timestamps:true})
 
