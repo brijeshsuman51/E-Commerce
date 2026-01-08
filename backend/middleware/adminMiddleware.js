@@ -3,12 +3,12 @@ const User = require('../model/user')
 const redisClient = require('../config/redisDB')
 
 const adminMiddleware = async (req,res,next) => {
-    
+    // console.log("hello")
     try {
     const {token} = req.cookies;
         
     if(!token)
-        throw new Error("Invalid Credentials")
+        throw new Error("Invalid Credentials1")
 
     const payload = jwt.verify(token,process.env.JWT_KEY)
 
@@ -36,6 +36,7 @@ const adminMiddleware = async (req,res,next) => {
 
     } catch (error) {
         res.status(401).send(error.message)
+        // console.log(error.message)
     }
 }
 

@@ -75,15 +75,23 @@ const userSchema = new Schema({
     },
     searchHistory:{
         type:[{
-            query:{
-                type:String,
-                required:true
+            productId:{
+                type:Schema.Types.ObjectId,
+                ref:'product'
             },
-            timestamp:{
+            searchedAt:{
                 type:Date,
                 default:Date.now
             },
-            category:{
+            productName:{
+                type:String,
+                required:false
+            },
+            productCategory:{
+                type:String,
+                default:''
+            },
+            searchQuery:{
                 type:String,
                 default:''
             }

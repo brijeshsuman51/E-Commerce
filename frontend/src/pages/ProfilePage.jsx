@@ -443,13 +443,14 @@ const ProfilePage = () => {
               {profile.searchHistory.slice().reverse().map((search, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{search.query}</p>
-                    {search.category && (
-                      <p className="text-xs text-blue-600">Category: {search.category}</p>
+                    <p className="text-sm font-medium text-gray-900">{search.productName}</p>
+                    <p className="text-xs text-blue-600">Category: {search.productCategory}</p>
+                    {search.searchQuery && (
+                      <p className="text-xs text-gray-500">Searched for: "{search.searchQuery}"</p>
                     )}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {new Date(search.timestamp).toLocaleDateString()} {new Date(search.timestamp).toLocaleTimeString()}
+                    {new Date(search.searchedAt).toLocaleDateString()} {new Date(search.searchedAt).toLocaleTimeString()}
                   </div>
                 </div>
               ))}

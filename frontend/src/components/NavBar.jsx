@@ -72,11 +72,46 @@ const Navbar = () => {
     setIsSearchDropdownOpen(query.length > 0);
   };
 
+  const handleSearchSubmit = async (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      if (user) {
+        try {
+          await axiosClient.post('/user/searchHistory', { 
+            query: searchQuery.trim(), 
+            category: '' 
+          });
+        } catch (error) {
+          console.error('Failed to track search:', error);
+        }
+      }
+      
+
+      navigate(`/?search=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchDropdownOpen(false);
+      setSearchQuery('');
+    }
+  };
+
   const filteredProducts = allProducts.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleProductClick = (productId) => {
+  const handleProductClick = async (productId) => {
+    const product = allProducts.find(p => p._id === productId);
+    
+    if (user && product) {
+      try {
+        await axiosClient.post('/user/searchHistory', { 
+          productId: product._id,
+          productName: product.name,
+          productCategory: product.category,
+          searchQuery: searchQuery.trim() || ''
+        });
+      } catch (error) {
+        console.error('Failed to track search history:', error);
+      }
+    }
+    
     navigate(`/product/${productId}`);
     setIsSearchDropdownOpen(false);
     setSearchQuery('');
@@ -98,7 +133,7 @@ const Navbar = () => {
           <div className="flex-shrink-0">
             <NavLink to="/" className="group flex flex-col items-start transition-transform hover:scale-105">
               <span className="text-2xl font-black tracking-tighter text-blue-600 group-hover:text-blue-700">
-                E-COMMERCE
+                  BUYZONE
               </span>
               <div className="flex items-center gap-1 -mt-1.5">
                 <span className="text-[10px] font-medium text-gray-500 italic uppercase tracking-widest">
@@ -117,6 +152,7 @@ const Navbar = () => {
                 placeholder="Search products, brands and more..." 
                 value={searchQuery}
                 onChange={handleSearchChange}
+                onKeyDown={handleSearchSubmit}
                 className="w-full h-11 pl-12 pr-4 bg-gray-100 border-transparent focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all outline-none text-sm"
               />
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
@@ -219,7 +255,6 @@ const Navbar = () => {
 
                         {user.role === 'admin' && (
                           <>
-                            {/* {console.log('User is admin:', user)} */}
                             <NavLink 
                               to="/admin/products" 
                               onClick={() => setIsDropdownOpen(false)}

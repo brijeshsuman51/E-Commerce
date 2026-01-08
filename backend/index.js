@@ -11,6 +11,7 @@ const cartRouter = require('./routes/cartRoute');
 const orderRouter = require('./routes/orderRoute');
 const mediaRouter = require('./routes/mediaRouter');
 const reviewRouter = require('./routes/reviewRoute');
+const freshSaleRouter = require('./routes/freshSaleRoute');
 
 app.use(cors({
     origin: 'http://localhost:5173',
@@ -26,6 +27,7 @@ app.use('/cart',cartRouter)
 app.use('/order',orderRouter)
 app.use('/media',mediaRouter)
 app.use('/review',reviewRouter)
+app.use('/freshsale',freshSaleRouter)
 
 const InitializeConnection = async () => {
     try {

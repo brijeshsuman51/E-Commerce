@@ -10,33 +10,33 @@ const AdminProducts = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-
-  
-  const [showFlashModal, setShowFlashModal] = useState(false);
-  const [selectedFlashProduct, setSelectedFlashProduct] = useState(null);
-  const [flashConfig, setFlashConfig] = useState({
+  const [showFreshModal, setShowFreshModal] = useState(false);
+  const [selectedFreshProduct, setSelectedFreshProduct] = useState(null);
+  const [freshConfig, setFreshConfig] = useState({
     endTime: '',
     discount: 20
   });
-  const [currentFlashId, setCurrentFlashId] = useState(null);
+  const [currentFreshId, setCurrentFreshId] = useState(null);
 
   const categories = ['all', 'electronics', 'clothing', 'books', 'home', 'sports', 'beauty', 'toys', 'automotive'];
 
   useEffect(() => {
     fetchProducts();
-    loadFlashSaleData();
+    fetchCurrentFreshSale();
   }, []);
 
-  const loadFlashSaleData = () => {
+  const fetchCurrentFreshSale = async () => {
     try {
-      const data = JSON.parse(localStorage.getItem('FLASH_SALE_DATA'));
-      if (data && new Date(data.endTime) > new Date()) {
-        setCurrentFlashId(data.productId);
+      const response = await axiosClient.get('/freshsale/current');
+      const data = response.data.freshSale;
+      if (data) {
+        setCurrentFreshId(data.productId);
       } else {
-        setCurrentFlashId(null);
+        setCurrentFreshId(null);
       }
-    } catch (e) {
-      setCurrentFlashId(null);
+    } catch (error) {
+      console.error('Failed to fetch current fresh sale:', error);
+      setCurrentFreshId(null);
     }
   };
 
@@ -62,39 +62,46 @@ const AdminProducts = () => {
     }
   };
 
-  const openFlashModal = (product) => {
-    setSelectedFlashProduct(product);
+  const openFreshModal = (product) => {
+    setSelectedFreshProduct(product);
     const tomorrow = new Date();
     tomorrow.setHours(tomorrow.getHours() + 24);
     tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
-    
-    setFlashConfig({
+
+    setFreshConfig({
       endTime: tomorrow.toISOString().slice(0, 16),
       discount: 20
     });
-    setShowFlashModal(true);
+    setShowFreshModal(true);
   };
 
-  const saveFlashSale = () => {
-    if (!selectedFlashProduct || !flashConfig.endTime) return;
+  const saveFreshSale = async () => {
+    if (!selectedFreshProduct || !freshConfig.endTime) return;
+    try {
+      const response = await axiosClient.post('/freshsale/create', {
+        productId: selectedFreshProduct._id,
+        endTime: freshConfig.endTime,
+        discount: freshConfig.discount
+      });
 
-    const saleData = {
-      productId: selectedFlashProduct._id,
-      endTime: flashConfig.endTime,
-      discount: flashConfig.discount,
-      startTime: new Date().toISOString()
-    };
-
-    localStorage.setItem('FLASH_SALE_DATA', JSON.stringify(saleData));
-    setCurrentFlashId(selectedFlashProduct._id);
-    setShowFlashModal(false);
-    alert(`Sale started for ${selectedFlashProduct.name}!`);
+      setCurrentFreshId(selectedFreshProduct._id);
+      setShowFreshModal(false);
+      alert(`Sale started for ${selectedFreshProduct.name}!`);
+    } catch (error) {
+      // console.error('Failed to create fresh sale:', error);
+      alert('Failed to start sale. Please try again.');
+    }
   };
 
-  const removeFlashSale = () => {
-    localStorage.removeItem('FLASH_SALE_DATA');
-    setCurrentFlashId(null);
-    alert('Active sale removed.');
+  const removeFreshSale = async () => {
+    try {
+      await axiosClient.put('/freshsale/stop');
+      setCurrentFreshId(null);
+      alert('Active sale stopped.');
+    } catch (error) {
+      // console.error('Failed to stop fresh sale:', error);
+      alert('Failed to stop sale. Please try again.');
+    }
   };
 
   const filteredProducts = products.filter(product => {
@@ -119,8 +126,8 @@ const AdminProducts = () => {
             <p className="text-gray-500">Manage products and set Sales</p>
           </div>
           <div className="flex gap-3">
-             {currentFlashId && (
-                <button onClick={removeFlashSale} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium transition-colors">
+             {currentFreshId && (
+                <button onClick={removeFreshSale} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium transition-colors">
                     Stop Current Sale
                 </button>
              )}
@@ -154,10 +161,10 @@ const AdminProducts = () => {
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredProducts.map(product => (
-            <div key={product._id} className={`bg-white rounded-xl shadow-sm overflow-hidden border-2 transition-all ${currentFlashId === product._id ? 'border-orange-500 ring-2 ring-orange-200' : 'border-transparent'}`}>
+            <div key={product._id} className={`bg-white rounded-xl shadow-sm overflow-hidden border-2 transition-all ${currentFreshId === product._id ? 'border-orange-500 ring-2 ring-orange-200' : 'border-transparent'}`}>
               <div className="relative h-48 bg-gray-100 p-4">
                 <img src={product.images?.[0]} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
-                {currentFlashId === product._id && (
+                {currentFreshId === product._id && (
                     <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg animate-pulse">
                         <Zap size={12} fill="currentColor" /> ACTIVE SALE
                     </div>
@@ -180,11 +187,11 @@ const AdminProducts = () => {
                    <button onClick={() => handleDelete(product._id)} className="bg-red-100 hover:bg-red-200 p-2 rounded-lg text-red-600 flex justify-center"><Trash2 size={18} /></button>
                    
                    <button 
-                     onClick={() => openFlashModal(product)} 
+                     onClick={() => openFreshModal(product)} 
                      title="Set as Sale Product"
-                     className={`p-2 rounded-lg flex justify-center transition-colors ${currentFlashId === product._id ? 'bg-orange-500 text-white' : 'bg-orange-100 hover:bg-orange-200 text-orange-600'}`}
+                     className={`p-2 rounded-lg flex justify-center transition-colors ${currentFreshId === product._id ? 'bg-orange-500 text-white' : 'bg-orange-100 hover:bg-orange-200 text-orange-600'}`}
                    >
-                     <Zap size={18} fill={currentFlashId === product._id ? "currentColor" : "none"} />
+                     <Zap size={18} fill={currentFreshId === product._id ? "currentColor" : "none"} />
                    </button>
                 </div>
               </div>
@@ -194,22 +201,22 @@ const AdminProducts = () => {
       </div>
 
       {/* Sale Modal */}
-      {showFlashModal && (
+      {showFreshModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4 text-white flex justify-between items-center">
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <Zap fill="currentColor" /> Configure Sale
               </h3>
-              <button onClick={() => setShowFlashModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
+              <button onClick={() => setShowFreshModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
             </div>
             
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
-                 <img src={selectedFlashProduct?.images?.[0]} alt="" className="w-16 h-16 object-contain bg-gray-50 rounded-lg border" />
+                 <img src={selectedFreshProduct?.images?.[0]} alt="" className="w-16 h-16 object-contain bg-gray-50 rounded-lg border" />
                  <div>
-                    <p className="font-bold text-gray-800 line-clamp-1">{selectedFlashProduct?.name}</p>
-                    <p className="text-sm text-gray-500">Current Price: ${selectedFlashProduct?.price}</p>
+                    <p className="font-bold text-gray-800 line-clamp-1">{selectedFreshProduct?.name}</p>
+                    <p className="text-sm text-gray-500">Current Price: ${selectedFreshProduct?.price}</p>
                  </div>
               </div>
 
@@ -218,8 +225,8 @@ const AdminProducts = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sale End Time</label>
                   <input 
                     type="datetime-local" 
-                    value={flashConfig.endTime}
-                    onChange={e => setFlashConfig({...flashConfig, endTime: e.target.value})}
+                    value={freshConfig.endTime}
+                    onChange={e => setFreshConfig({...freshConfig, endTime: e.target.value})}
                     className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-orange-500 outline-none"
                   />
                 </div>
@@ -228,19 +235,19 @@ const AdminProducts = () => {
                   <input 
                     type="number" 
                     min="1" max="99"
-                    value={flashConfig.discount}
-                    onChange={e => setFlashConfig({...flashConfig, discount: e.target.value})}
+                    value={freshConfig.discount}
+                    onChange={e => setFreshConfig({...freshConfig, discount: e.target.value})}
                     className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-orange-500 outline-none"
                   />
                 </div>
                 
                 <div className="bg-orange-50 p-3 rounded-lg border border-orange-100 text-sm text-orange-800">
-                    <p><strong>New Price:</strong> ${(selectedFlashProduct?.price * (1 - flashConfig.discount / 100)).toFixed(2)}</p>
+                    <p><strong>New Price:</strong> ${(selectedFreshProduct?.price * (1 - freshConfig.discount / 100)).toFixed(2)}</p>
                 </div>
               </div>
 
               <button 
-                onClick={saveFlashSale}
+                onClick={saveFreshSale}
                 className="w-full mt-6 bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 rounded-lg font-bold shadow-lg hover:shadow-orange-500/30 transition-all active:scale-95"
               >
                 Launch Sale

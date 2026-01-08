@@ -3,6 +3,7 @@ const User = require("../model/user")
 const validate = require('../utils/validator')
 const bcrypt = require("bcrypt")
 const jwt = require('jsonwebtoken')
+const mongoose = require('mongoose')
 
 // Register the user
 
@@ -137,6 +138,10 @@ const getUserProfile = async (req, res) => {
                 select: 'title price image category' 
             })
             .populate('orders')
+            .populate({
+                path: 'searchHistory.productId',
+                select: 'name price images category'
+            })
             .select('-password');
         
         if (!user) {
@@ -207,10 +212,14 @@ const updateUserProfile = async (req, res) => {
 const addSearchHistory = async (req, res) => {
     try {
         const userId = req.result._id;
-        const { query, category } = req.body;
+        const { productId, productName, productCategory, searchQuery } = req.body;
 
-        if (!query || query.trim() === '') {
-            return res.status(400).send("Search query is required");
+        if (!productId || !productName) {
+            return res.status(400).send("Product ID and name are required");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).send("Invalid product ID format");
         }
 
         const user = await User.findById(userId);
@@ -218,15 +227,33 @@ const addSearchHistory = async (req, res) => {
             return res.status(404).send("User not found");
         }
 
-        const newSearch = {
-            query: query.trim(),
-            category: category || '',
-            timestamp: new Date()
+        user.searchHistory = user.searchHistory.filter(item => 
+            item.productId && item.productName
+        );
+
+
+        const existingIndex = user.searchHistory.findIndex(
+            item => item.productId && item.productId.toString() === productId
+        );
+
+        const newSearchItem = {
+            productId,
+            productName,
+            productCategory: productCategory || '',
+            searchQuery: searchQuery || '',
+            searchedAt: new Date()
         };
 
-        user.searchHistory.unshift(newSearch);
-        if (user.searchHistory.length > 50) {
-            user.searchHistory = user.searchHistory.slice(0, 50);
+        if (existingIndex !== -1) {
+
+            user.searchHistory[existingIndex] = newSearchItem;
+            const [item] = user.searchHistory.splice(existingIndex, 1);
+            user.searchHistory.unshift(item);
+        } else {
+            user.searchHistory.unshift(newSearchItem);
+            if (user.searchHistory.length > 50) {
+                user.searchHistory = user.searchHistory.slice(0, 50);
+            }
         }
 
         await user.save();

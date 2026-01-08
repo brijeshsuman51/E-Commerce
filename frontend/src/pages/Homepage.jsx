@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { 
   Loader2, ChevronLeft, ChevronRight, 
   Filter, X, ShoppingCart, Clock, Zap, Mail, Megaphone
@@ -53,7 +53,7 @@ const CategoryCard = ({ title, products, type = "single", navigate, categorySlug
     );
 };
 
-const ProductCarousel = ({ title, products, navigate, handleAddToCart, flashSaleData, handleProductClick }) => {
+const ProductCarousel = ({ title, products, navigate, handleAddToCart, freshSaleData, handleProductClick }) => {
     const scrollRef = useRef(null);
   
     const scroll = (direction) => {
@@ -65,8 +65,8 @@ const ProductCarousel = ({ title, products, navigate, handleAddToCart, flashSale
     };
   
     const getPrice = (product) => {
-        if (flashSaleData && flashSaleData.productId === product._id && flashSaleData.isActive) {
-            const discounted = product.price * (1 - flashSaleData.discount / 100);
+        if (freshSaleData && freshSaleData.productId === product._id && freshSaleData.isActive) {
+            const discounted = product.price * (1 - freshSaleData.discount / 100);
             return (
                 <div className="flex flex-col">
                     <span className="text-xs text-gray-400 line-through">${product.price}</span>
@@ -99,9 +99,9 @@ const ProductCarousel = ({ title, products, navigate, handleAddToCart, flashSale
           {products.map((product) => (
             <div key={product._id} className="flex-none w-52 cursor-pointer group/item flex flex-col" onClick={() => handleProductClick(product)}>
               <div className="w-52 h-52 bg-gray-50 flex items-center justify-center mb-3 rounded-xl p-4 border border-transparent group-hover/item:border-blue-200 transition-all relative">
-                {flashSaleData?.productId === product._id && flashSaleData.isActive && (
+                {freshSaleData?.productId === product._id && freshSaleData.isActive && (
                     <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-md z-10 animate-pulse">
-                        -{flashSaleData.discount}% OFF
+                        -{freshSaleData.discount}% OFF
                     </span>
                 )}
                 <img src={product.images?.[0]} alt={product.name} className="max-w-full max-h-full object-contain group-hover/item:scale-105 transition-transform duration-300" />
@@ -133,6 +133,7 @@ const ProductCarousel = ({ title, products, navigate, handleAddToCart, flashSale
 const Homepage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate(); 
+  const [searchParams] = useSearchParams();
   const { user } = useSelector((state) => state.auth);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -141,48 +142,36 @@ const Homepage = () => {
 
   const categoriesList = ['electronics','clothing','books','home','sports','beauty','toys','automotive'];
 
-  const [filters, setFilters] = useState({ category: '', brand: '', minPrice: '', maxPrice: '', minRating: '', sortBy: 'name' });
+  const [filters, setFilters] = useState({ category: '', brand: '', minPrice: '', maxPrice: '', minRating: '', sortBy: 'name', search: '' });
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState({...filters});
-  const [flashSaleData, setFlashSaleData] = useState({ isActive: false, timeString: '00:00:00', productId: null, discount: 0 });
-  const [flashProduct, setFlashProduct] = useState(null);
+  const [freshSaleData, setFreshSaleData] = useState({ isActive: false, timeString: '00:00:00', productId: null, discount: 0 });
+  const [freshProduct, setFreshProduct] = useState(null);
 
   useEffect(() => {
-    const updateTimer = () => {
+    const fetchFreshSale = async () => {
       try {
-          const savedData = JSON.parse(localStorage.getItem('FLASH_SALE_DATA'));
-          
-          if (!savedData || !savedData.endTime) {
-            setFlashSaleData(prev => ({ ...prev, isActive: false }));
-            return;
-          }
-
-          const endTime = new Date(savedData.endTime).getTime();
-          const now = new Date().getTime();
-          const distance = endTime - now;
-          
-          if (distance > 0) {
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-            
-            setFlashSaleData({
-                isActive: true,
-                timeString: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
-                productId: savedData.productId,
-                discount: savedData.discount
-            });
-          } else {
-            setFlashSaleData(prev => ({ ...prev, isActive: false }));
-            localStorage.removeItem('FLASH_SALE_DATA'); 
-          }
+        const response = await axiosClient.get('/freshsale/current');
+        const data = response.data.freshSale;
+        
+        if (data) {
+          setFreshSaleData({
+            isActive: true,
+            timeString: data.timeString,
+            productId: data.productId,
+            discount: data.discount
+          });
+        } else {
+          setFreshSaleData({ isActive: false, timeString: '00:00:00', productId: null, discount: 0 });
+        }
       } catch (err) {
-        console.error("Timer Error", err);
+        // console.error("Error fetching fresh sale:", err);
+        setFreshSaleData({ isActive: false, timeString: '00:00:00', productId: null, discount: 0 });
       }
     };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000); 
+    fetchFreshSale();
+    const interval = setInterval(fetchFreshSale, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -203,11 +192,18 @@ const Homepage = () => {
 
 
   useEffect(() => {
-      if (products.length > 0 && flashSaleData.productId) {
-          const found = products.find(p => p._id === flashSaleData.productId);
-          setFlashProduct(found);
+    const searchQuery = searchParams.get('search');
+    if (searchQuery) {
+      setFilters(prev => ({ ...prev, search: searchQuery }));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+      if (products.length > 0 && freshSaleData.productId) {
+          const found = products.find(p => p._id === freshSaleData.productId);
+          setFreshProduct(found);
       }
-  }, [products, flashSaleData.productId]);
+  }, [products, freshSaleData.productId]);
 
   const handleShopNow = () => {
     const featuredSection = document.getElementById('featured-products');
@@ -246,6 +242,20 @@ const Homepage = () => {
   };
 
   const handleProductClick = async (product) => {
+    const searchQuery = searchParams.get('search');
+    if (user && searchQuery) {
+      try {
+        await axiosClient.post('/user/searchHistory', {
+          productId: product._id,
+          productName: product.name,
+          productCategory: product.category,
+          searchQuery: searchQuery
+        });
+      } catch (error) {
+        console.error('Failed to track search history:', error);
+      }
+    }
+    
     await trackProductClick(product);
     navigate(`/product/${product._id}`);
   };
@@ -276,7 +286,7 @@ const Homepage = () => {
       trackSearchHistory(searchQuery, tempFilters.category || '');
     }
   };
-  const clearFilters = () => { setFilters({ category: '', brand: '', minPrice: '', maxPrice: '', minRating: '', sortBy: 'name' }); setIsFilterModalOpen(false); };
+  const clearFilters = () => { setFilters({ category: '', brand: '', minPrice: '', maxPrice: '', minRating: '', sortBy: 'name', search: '' }); setIsFilterModalOpen(false); };
 
   const filteredProducts = products.filter(product => {
     if (filters.category && product.category !== filters.category) return false;
@@ -284,6 +294,9 @@ const Homepage = () => {
     if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
     if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
     if (filters.minRating && product.rating < parseFloat(filters.minRating)) return false;
+    if (filters.search && !product.name.toLowerCase().includes(filters.search.toLowerCase()) && 
+        !product.brand?.toLowerCase().includes(filters.search.toLowerCase()) &&
+        !product.category.toLowerCase().includes(filters.search.toLowerCase())) return false;
     return true;
   }).sort((a, b) => {
     if (filters.sortBy === 'priceLow') return a.price - b.price;
@@ -330,7 +343,7 @@ const Homepage = () => {
       {/* HERO */}
       <section className="bg-gradient-to-r from-blue-500 to-purple-500 text-white relative">
         <div className="container mx-auto px-4 text-center pt-20 pb-48"> 
-          <h1 className="text-5xl font-bold mb-6 drop-shadow-md">Welcome to Our E-Commerce Store</h1>
+          <h1 className="text-5xl font-bold mb-6 drop-shadow-md">Welcome to Our Buy Zone</h1>
           <p className="text-xl mb-8 max-w-2xl mx-auto text-blue-100">Discover amazing products at unbeatable prices.</p>
         </div>
       </section>
@@ -364,31 +377,31 @@ const Homepage = () => {
 
 
             <div className="flex-1 p-4 relative flex flex-col justify-center">
-                {flashSaleData.isActive ? (
-                    <div className="cursor-pointer group h-full flex flex-col" onClick={() => navigate(`/product/${flashProduct?._id}`)}>
+                {freshSaleData.isActive ? (
+                    <div className="cursor-pointer group h-full flex flex-col" onClick={() => navigate(`/product/${freshProduct?._id}`)}>
                          <div className="flex justify-between items-center mb-2">
                              <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded border border-red-100 flex items-center gap-1 animate-pulse">
-                                 <Zap className="w-3 h-3 fill-current" /> FLASH DEAL
+                                 <Zap className="w-3 h-3 fill-current" /> FRESH DEAL
                              </span>
                              <div className="text-xs font-mono font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> {flashSaleData.timeString}
+                                <Clock className="w-3 h-3" /> {freshSaleData.timeString}
                              </div>
                          </div>
     
                         <div className="relative flex-1 bg-gray-50 rounded-lg p-2 mb-2 flex items-center justify-center overflow-hidden">
-                            <img src={flashProduct?.images?.[0]} alt="Deal" className="max-w-full h-24 object-contain group-hover:scale-110 transition-transform duration-500" />
+                            <img src={freshProduct?.images?.[0]} alt="Deal" className="max-w-full h-24 object-contain group-hover:scale-110 transition-transform duration-500" />
                             <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                                -{flashSaleData.discount}%
+                                -{freshSaleData.discount}%
                             </div>
                         </div>
 
                         <div>
-                            <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{flashProduct?.name}</h3>
+                            <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{freshProduct?.name}</h3>
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] text-gray-400 line-through">Was ${flashProduct?.price}</span>
+                                    <span className="text-[10px] text-gray-400 line-through">Was ${freshProduct?.price}</span>
                                     <span className="text-lg font-bold text-red-600 leading-none">
-                                        ${(flashProduct?.price * (1 - flashSaleData.discount / 100)).toFixed(0)}
+                                        ${(freshProduct?.price * (1 - freshSaleData.discount / 100)).toFixed(0)}
                                     </span>
                                 </div>
                                 <button className="bg-red-100 text-red-600 p-1.5 rounded-lg hover:bg-red-600 hover:text-white transition-colors">
@@ -436,17 +449,17 @@ const Homepage = () => {
 
              <div ref={featuredScrollRef} className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                {filteredProducts.map((product) => {
-                 const isFlash = flashSaleData.isActive && flashSaleData.productId === product._id;
-                 const finalPrice = isFlash 
-                    ? (product.price * (1 - flashSaleData.discount / 100)).toFixed(2)
+                 const isFresh = freshSaleData.isActive && freshSaleData.productId === product._id;
+                 const finalPrice = isFresh 
+                    ? (product.price * (1 - freshSaleData.discount / 100)).toFixed(2)
                     : product.price;
 
                  return (
-                 <div key={product._id} className={`min-w-[280px] w-[280px] group/card bg-white border rounded-xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 ${isFlash ? 'border-red-200 ring-1 ring-red-100' : 'border-blue-100'}`}>
+                 <div key={product._id} className={`min-w-[280px] w-[280px] group/card bg-white border rounded-xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 ${isFresh ? 'border-red-200 ring-1 ring-red-100' : 'border-blue-100'}`}>
                    <div className="relative bg-gray-50 w-full h-60 rounded-lg mb-4 overflow-hidden cursor-pointer flex items-center justify-center" onClick={() => handleProductClick(product)}>
-                     {isFlash && (
+                     {isFresh && (
                         <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow flex items-center gap-1">
-                            <Zap className="w-3 h-3 fill-current" /> {flashSaleData.timeString}
+                            <Zap className="w-3 h-3 fill-current" /> {freshSaleData.timeString}
                         </div>
                      )}
                      <img src={product.images?.[0]} alt={product.name} className="w-full h-full object-contain p-4 group-hover/card:scale-105 transition-transform duration-300" />
@@ -458,8 +471,8 @@ const Homepage = () => {
                      
                      <div className="flex items-center justify-between mt-2">
                        <div className="flex flex-col">
-                           {isFlash && <span className="text-xs text-gray-400 line-through">${product.price}</span>}
-                           <span className={`text-xl font-bold ${isFlash ? 'text-red-600' : 'text-gray-900'}`}>${finalPrice}</span>
+                           {isFresh && <span className="text-xs text-gray-400 line-through">${product.price}</span>}
+                           <span className={`text-xl font-bold ${isFresh ? 'text-red-600' : 'text-gray-900'}`}>${finalPrice}</span>
                        </div>
                        <button 
                          disabled={product.stock === 0}
@@ -479,7 +492,7 @@ const Homepage = () => {
 
       {/* CAROUSELS */}
       <div className="container mx-auto pb-10 mt-8">
-        <ProductCarousel title="Recommended For You" products={filteredProducts.slice().reverse()} navigate={navigate} handleAddToCart={handleAddToCart} flashSaleData={flashSaleData} handleProductClick={handleProductClick} />
+        <ProductCarousel title="Recommended For You" products={filteredProducts.slice().reverse()} navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} />
       </div>
       
       {/* FILTER MODAL */}
@@ -490,7 +503,7 @@ const Homepage = () => {
                     <h3 className="font-bold text-lg">Filters</h3>
                     <button onClick={() => setIsFilterModalOpen(false)}><X className="text-gray-500 hover:text-red-500"/></button>
                 </div>
-                
+
                 <div className="space-y-4">
                     <button onClick={clearFilters} className="w-full border py-2 rounded">Clear Filters</button>
                     <button onClick={applyFilters} className="w-full bg-blue-600 text-white py-2 rounded">Apply Filters</button>
