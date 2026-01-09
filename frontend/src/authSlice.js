@@ -92,11 +92,15 @@ const authSlice = createSlice({
     user: null,
     isAuthenticated: false,
     loading: false,
-    error: null
+    error: null,
+    selectedCountry: 'INDIA'
   },
   reducers: {
     updateUser: (state, action) => {
       state.user = action.payload;
+    },
+    updateSelectedCountry: (state, action) => {
+      state.selectedCountry = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -172,5 +176,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { updateUser } = authSlice.actions;
+export const { updateUser, updateSelectedCountry } = authSlice.actions;
 export default authSlice.reducer;

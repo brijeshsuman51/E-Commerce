@@ -4,6 +4,7 @@ import {
   ShoppingBag, Star, Filter, X, Check, Loader2, ChevronLeft 
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
+import { getPriceForCountry, formatPrice } from '../utils/pricing';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../cartSlice';
 
@@ -11,7 +12,7 @@ const RecomendCategoryPage = () => {
   const { categoryName } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, selectedCountry } = useSelector((state) => state.auth);
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,8 +56,9 @@ const RecomendCategoryPage = () => {
   const filteredProducts = products.filter(product => {
     if (product.category?.toLowerCase() !== categoryName?.toLowerCase()) return false;
     if (filters.brand && product.brand !== filters.brand) return false;
-    if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
-    if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
+    const productPriceForCountry = getPriceForCountry(product, selectedCountry).price || 0;
+    if (filters.minPrice && productPriceForCountry < parseFloat(filters.minPrice)) return false;
+    if (filters.maxPrice && productPriceForCountry > parseFloat(filters.maxPrice)) return false;
     if (filters.minRating && product.rating < parseFloat(filters.minRating)) return false;
     
     return true;
@@ -205,7 +207,10 @@ const RecomendCategoryPage = () => {
                   </div>
                   
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-xl font-bold text-gray-900">${product.price}</span>
+                    {(() => {
+                      const po = getPriceForCountry(product, selectedCountry);
+                      return <span className="text-xl font-bold text-gray-900">{po.symbol}{po.price}</span>;
+                    })()}
                     <button 
                       disabled={product.stock === 0}
                       onClick={() => handleAddToCart(product._id)}

@@ -1,4 +1,5 @@
 const Product = require("../model/product")
+const { getPriceForCountry } = require("../utils/pricing")
 
 // Create Product
 
@@ -30,7 +31,6 @@ const updateProduct = async (req,res) => {
             return res.status(404).send("Product not found")
         }
 
-        // Check if user is the creator or admin
         if(product.createdBy.toString() !== userId.toString() && req.result.role !== 'admin'){
             return res.status(403).send("You don't have permission to update this product")
         }
@@ -61,7 +61,6 @@ const deleteProduct = async (req,res) => {
             return res.status(404).send("Product not found")
         }
 
-        // Check if user is the creator or admin
         if(product.createdBy.toString() !== userId.toString() && req.result.role !== 'admin'){
             return res.status(403).send("You don't have permission to delete this product")
         }

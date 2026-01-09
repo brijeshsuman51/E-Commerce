@@ -1,6 +1,7 @@
 const Order = require('../model/order')
 const User = require('../model/user')
 const Product = require('../model/product')
+const FreshSale = require('../model/freshSale')
 
 // Create Order
 
@@ -12,8 +13,16 @@ const createOrder = async (req,res) => {
         if(!products || !Array.isArray(products) || products.length === 0 || !shippingAddress){
             return res.status(400).send('Products and shipping address are required')
         }
+        const user = await User.findById(userId);
+        if (!user.phone || !user.phone.trim()) {
+            return res.status(400).send('Phone number is required. Please update your profile.')
+        }
+        if (!user.address || !user.address.street || !user.address.city || !user.address.state || !user.address.zipCode) {
+            return res.status(400).send('Complete address information is required. Please update your profile.')
+        }
 
         let totalAmount = 0;
+        let totalSavings = 0;
         const orderProducts = [];
 
         for(const item of products){
@@ -21,12 +30,31 @@ const createOrder = async (req,res) => {
             if(!product || !product.isActive || product.stock < item.quantity){
                 return res.status(400).send(`Product ${item.productId} not available or insufficient stock`)
             }
-            const price = product.price;
+
+            const activeSale = await FreshSale.findOne({
+                productId: item.productId,
+                isActive: true,
+                endTime: { $gt: new Date() }
+            });
+
+            let price = product.price;
+            let originalPrice = product.price;
+            let discountApplied = 0;
+
+            if (activeSale) {
+                discountApplied = activeSale.discount;
+                price = product.price * (1 - activeSale.discount / 100);
+            }
+
             totalAmount += price * item.quantity;
+            totalSavings += (originalPrice - price) * item.quantity;
+
             orderProducts.push({
                 productId: item.productId,
                 quantity: item.quantity,
                 price: price,
+                originalPrice: originalPrice,
+                discountApplied: discountApplied,
                 name: product.name
             })
 
@@ -38,14 +66,13 @@ const createOrder = async (req,res) => {
             userId,
             products: orderProducts,
             totalAmount,
+            totalSavings,
             shippingAddress,
             paymentMethod: paymentMethod || 'credit_card'
         })
 
-        // Add to user's orders
         await User.findByIdAndUpdate(userId, {$push: {orders: order._id}})
 
-        // Clear cart
         await User.findByIdAndUpdate(userId, {cart: []})
 
         res.status(201).json({ message: "Order Created Successfully", order });

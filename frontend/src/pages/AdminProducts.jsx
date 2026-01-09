@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Package, Plus, Edit, Trash2, Search, Loader2, Star, Eye, Zap, X } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
+import { formatPrice, getPriceForCountry } from '../utils/pricing';
 
 const AdminProducts = () => {
   const navigate = useNavigate();
+  const { selectedCountry } = useSelector(state => state.auth);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -175,7 +178,10 @@ const AdminProducts = () => {
                 <h3 className="font-bold text-gray-800 line-clamp-1">{product.name}</h3>
                 <p className="text-gray-500 text-sm mb-2">{product.category}</p>
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg font-bold text-blue-600">${product.price}</span>
+                  {(() => {
+                    const po = getPriceForCountry(product, selectedCountry);
+                    return <span className="text-lg font-bold text-blue-600">{po.symbol}{po.price}</span>;
+                  })()}
                   <div className="flex items-center text-yellow-400 text-sm">
                     <Star size={14} fill="currentColor" /> {product.rating}
                   </div>
@@ -211,12 +217,15 @@ const AdminProducts = () => {
               <button onClick={() => setShowFreshModal(false)} className="hover:bg-white/20 p-1 rounded-full"><X size={20} /></button>
             </div>
             
-            <div className="p-6">
+              <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                  <img src={selectedFreshProduct?.images?.[0]} alt="" className="w-16 h-16 object-contain bg-gray-50 rounded-lg border" />
                  <div>
                     <p className="font-bold text-gray-800 line-clamp-1">{selectedFreshProduct?.name}</p>
-                    <p className="text-sm text-gray-500">Current Price: ${selectedFreshProduct?.price}</p>
+                   {(() => {
+                     const sp = selectedFreshProduct ? getPriceForCountry(selectedFreshProduct, selectedCountry) : { symbol: getPriceForCountry({ price: 0 }, selectedCountry).symbol, price: 0 };
+                     return <p className="text-sm text-gray-500">Current Price: {sp.symbol}{sp.price}</p>;
+                   })()}
                  </div>
               </div>
 
@@ -242,7 +251,12 @@ const AdminProducts = () => {
                 </div>
                 
                 <div className="bg-orange-50 p-3 rounded-lg border border-orange-100 text-sm text-orange-800">
-                    <p><strong>New Price:</strong> ${(selectedFreshProduct?.price * (1 - freshConfig.discount / 100)).toFixed(2)}</p>
+                  {(() => {
+                    const base = getPriceForCountry(selectedFreshProduct || { price: 0 }, selectedCountry).price || 0;
+                    const newPrice = base * (1 - (freshConfig.discount || 0) / 100);
+                    const currency = getPriceForCountry(selectedFreshProduct || { price: 0 }, selectedCountry);
+                    return <p><strong>New Price:</strong> {currency.symbol}{(Math.round(newPrice * 100) / 100).toFixed(2)}</p>;
+                  })()}
                 </div>
               </div>
 

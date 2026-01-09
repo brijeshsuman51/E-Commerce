@@ -15,17 +15,19 @@ import {
 import { logoutUser } from '../authSlice';
 import { fetchCart,clearCart } from '../cartSlice';
 import axiosClient from '../utils/axiosClient';
+import { getPriceForCountry, getCurrencyForCountry, formatPrice } from '../utils/pricing';
 
 const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
-  const { total } = useSelector((state) => state.cart);
+  const { user, selectedCountry } = useSelector((state) => state.auth);
+  const { items = [], total } = useSelector((state) => state.cart);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [allProducts, setAllProducts] = useState([]);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [currentFreshSale, setCurrentFreshSale] = useState(null);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -45,6 +47,20 @@ const Navbar = () => {
       }
     };
     fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentFreshSale = async () => {
+      try {
+        const response = await axiosClient.get('/freshsale/current');
+        const data = response.data.freshSale;
+        setCurrentFreshSale(data);
+      } catch (error) {
+        console.error('Failed to fetch current fresh sale:', error);
+        setCurrentFreshSale(null);
+      }
+    };
+    fetchCurrentFreshSale();
   }, []);
 
   useEffect(() => {
@@ -124,6 +140,19 @@ const Navbar = () => {
     return trimmed[0].toUpperCase()
   }
 
+  
+  const getDiscountedTotal = () => {
+    if (!items || items.length === 0) return 0;
+    
+    return items.reduce((total, item) => {
+      const product = item.productId || {};
+      const originalPrice = getPriceForCountry(product, selectedCountry).price || 0;
+      const hasSale = currentFreshSale && currentFreshSale.productId === product._id;
+      const finalPrice = hasSale ? originalPrice * (1 - currentFreshSale.discount / 100) : originalPrice;
+      return total + (finalPrice * item.quantity);
+    }, 0);
+  };
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all duration-300">
       <div className="max-w-[1400px] mx-auto px-4 md:px-8">
@@ -182,7 +211,7 @@ const Navbar = () => {
                           {product.name}
                         </p>
                         <p className="text-xs text-gray-500 truncate">
-                          {product.category} • ${product.price}
+                          {product.category} • {(() => { const po = getPriceForCountry(product, selectedCountry); return `${po.symbol}${po.price}`; })()}
                         </p>
                       </div>
                     </div>
@@ -337,7 +366,7 @@ const Navbar = () => {
                   My Cart
                 </span>
                 <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  ${total.toFixed(2)}
+                  {formatPrice(getDiscountedTotal(), selectedCountry)}
                 </span>
               </div>
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient from '../utils/axiosClient';
 import { useSelector } from 'react-redux';
+import { formatPrice } from '../utils/pricing';
 import { 
   Package, Clock, CheckCircle, XCircle, Loader2, 
   User, Save, Filter, Search, AlertCircle 
@@ -9,7 +10,7 @@ import {
 const STATUS_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 const AdminOrders = () => {
-  const { user } = useSelector(state => state.auth);
+  const { user, selectedCountry } = useSelector(state => state.auth);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -225,10 +226,10 @@ const AdminOrders = () => {
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">{item.name || item.productId?.name}</p>
-                              <p className="text-sm text-gray-500">Qty: {item.quantity} × ${item.price}</p>
+                              <p className="text-sm text-gray-500">Qty: {item.quantity} × {formatPrice(item.price, selectedCountry)}</p>
                             </div>
                           </div>
-                          <p className="font-semibold text-gray-900">${(item.quantity * item.price).toFixed(2)}</p>
+                        <p className="font-semibold text-gray-900">{formatPrice(item.quantity * item.price, selectedCountry)}</p>
                         </div>
                       ))}
                     </div>
@@ -236,7 +237,7 @@ const AdminOrders = () => {
                     <div className="flex justify-end pt-4 border-t border-gray-100 mb-4">
                       <div className="text-right">
                         <span className="text-sm text-gray-500">Order Total</span>
-                        <p className="text-xl font-bold text-gray-900">${order.totalAmount.toFixed(2)}</p>
+                        <p className="text-xl font-bold text-gray-900">{formatPrice(order.totalAmount, selectedCountry)}</p>
                       </div>
                     </div>
 

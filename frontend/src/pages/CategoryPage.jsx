@@ -6,12 +6,13 @@ import {
 import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../cartSlice';
+import { getPriceForCountry, getCurrencyForCountry } from '../utils/pricing';
 
 const CategoryPage = () => {
   const { categoryName } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, selectedCountry } = useSelector((state) => state.auth);
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,6 @@ const CategoryPage = () => {
     sortBy: 'name'
   });
 
-  // Modal States
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState({...filters});
   const [activeTab, setActiveTab] = useState('brand');
@@ -55,14 +55,15 @@ const CategoryPage = () => {
   const filteredProducts = products.filter(product => {
     if (product.category?.toLowerCase() !== categoryName?.toLowerCase()) return false;
     if (filters.brand && product.brand !== filters.brand) return false;
-    if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
-    if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
+    const productPrice = getPriceForCountry(product, selectedCountry).price;
+    if (filters.minPrice && productPrice < parseFloat(filters.minPrice)) return false;
+    if (filters.maxPrice && productPrice > parseFloat(filters.maxPrice)) return false;
     if (filters.minRating && product.rating < parseFloat(filters.minRating)) return false;
     
     return true;
   }).sort((a, b) => {
-    if (filters.sortBy === 'priceLow') return a.price - b.price;
-    if (filters.sortBy === 'priceHigh') return b.price - a.price;
+    if (filters.sortBy === 'priceLow') return getPriceForCountry(a, selectedCountry).price - getPriceForCountry(b, selectedCountry).price;
+    if (filters.sortBy === 'priceHigh') return getPriceForCountry(b, selectedCountry).price - getPriceForCountry(a, selectedCountry).price;
     if (filters.sortBy === 'rating') return b.rating - a.rating;
     return a.name.localeCompare(b.name);
   });
@@ -114,7 +115,7 @@ const CategoryPage = () => {
   return (
     <div className="min-h-screen bg-blue-50/50">
       
-      {/* NAVIGATION BAR (Pills) */}
+      {/* NAVIGATION BAR */}
       <section className="bg-white border-b border-blue-100 sticky top-16 z-30 shadow-sm">
         <div className="container mx-auto px-4 py-3 flex gap-3 items-center">
           
@@ -135,6 +136,7 @@ const CategoryPage = () => {
           <div className="w-px h-8 bg-gray-200 mx-1"></div>
 
           {/* Horizontal Category Scroll */}
+
           <div className="flex gap-2 overflow-x-auto scrollbar-hide w-full pb-1" style={{ scrollbarWidth: 'none' }}>
             <button 
                 onClick={() => navigate('/')}
@@ -251,7 +253,10 @@ const CategoryPage = () => {
                   </div>
                   
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-xl font-bold text-gray-900">${product.price}</span>
+                    <span className="text-xl font-bold text-gray-900">{(() => {
+                      const priceObj = getPriceForCountry(product, selectedCountry);
+                      return `${priceObj.symbol}${priceObj.price}`;
+                    })()}</span>
                     <button 
                       disabled={product.stock === 0}
                       onClick={() => handleAddToCart(product._id)}
@@ -276,7 +281,6 @@ const CategoryPage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             
-            {/* Modal Header */}
             <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="text-lg font-bold text-gray-800">Filter {categoryName}</h3>
               <button onClick={() => setIsFilterModalOpen(false)} className="text-gray-400 hover:text-red-500">

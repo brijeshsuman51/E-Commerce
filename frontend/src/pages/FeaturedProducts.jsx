@@ -4,11 +4,12 @@ import { ShoppingCart, ShoppingBag, Star } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../cartSlice';
+import { getPriceForCountry, getCurrencyForCountry } from '../utils/pricing';
 
 const FeaturedProducts = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, selectedCountry } = useSelector((state) => state.auth);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,7 +57,10 @@ const FeaturedProducts = () => {
             </div>
             <p className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">{p.name}</p>
             <div className="flex items-center justify-between gap-2 mt-4">
-            <p className="text-lg font-bold text-blue-700 mb-2">${p.price}</p>
+            <p className="text-lg font-bold text-blue-700 mb-2">{(() => {
+              const priceObj = getPriceForCountry(p, selectedCountry);
+              return `${priceObj.symbol}${priceObj.price}`;
+            })()}</p>
               <button
                 onClick={() => handleAddToCart(p._id)}
                 disabled={p.stock === 0}

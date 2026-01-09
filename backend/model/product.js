@@ -16,6 +16,31 @@ const productSchema = new Schema({
         required:true,
         min:0
     },
+    pricing:{
+        type:{
+            INDIA:{
+                price:{type:Number, default:0},
+                currency:{type:String, default:'INR'}
+            },
+            USA:{
+                price:{type:Number, default:0},
+                currency:{type:String, default:'USD'}
+            },
+            UK:{
+                price:{type:Number, default:0},
+                currency:{type:String, default:'GBP'}
+            },
+            CANADA:{
+                price:{type:Number, default:0},
+                currency:{type:String, default:'CAD'}
+            },
+            AUSTRALIA:{
+                price:{type:Number, default:0},
+                currency:{type:String, default:'AUD'}
+            }
+        },
+        default:{}
+    },
     category:{
         type:String,
         required:true,

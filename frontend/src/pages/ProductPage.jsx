@@ -8,12 +8,13 @@ import {
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { addToCart } from '../cartSlice';
+import { getPriceForCountry, getCurrencyForCountry, formatConvertedPrice } from '../utils/pricing';
 
 const ProductPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, selectedCountry } = useSelector((state) => state.auth);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,8 +22,7 @@ const ProductPage = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
-
-  // Review states
+  const [freshSaleData, setFreshSaleData] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -56,9 +56,20 @@ const ProductPage = () => {
       }
     };
 
+    const fetchFreshSale = async () => {
+      try {
+        const response = await axiosClient.get('/freshsale/current');
+        setFreshSaleData(response.data.freshSale);
+      } catch (err) {
+        console.error('Failed to fetch fresh sale:', err);
+        setFreshSaleData(null);
+      }
+    };
+
     if (id) {
       fetchProduct();
       fetchReviews();
+      fetchFreshSale();
     }
   }, [id]);
 
@@ -126,8 +137,6 @@ const ProductPage = () => {
 
       setReviews(reviewsResponse.data);
       setProduct(productResponse.data);
-
-
       setReviewComment('');
       setReviewRating(5);
       setShowReviewForm(false);
@@ -151,8 +160,6 @@ const ProductPage = () => {
 
     try {
       await axiosClient.delete(`/review/delete/${reviewId}`);
-
-      
       const [reviewsResponse, productResponse] = await Promise.all([
         axiosClient.get(`/review/product/${id}`),
         axiosClient.get(`/product/getProductById/${id}`)
@@ -219,7 +226,6 @@ const ProductPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Back Button */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <button
@@ -234,9 +240,7 @@ const ProductPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Product Images */}
           <div className="space-y-4">
-            {/* Main Image */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                 {product.images && product.images.length > 0 ? (
@@ -277,7 +281,6 @@ const ProductPage = () => {
 
           {/* Product Details */}
           <div className="space-y-6">
-            {/* Product Info */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <div className="mb-4">
                 <p className="text-sm text-blue-600 font-semibold uppercase tracking-wider mb-2">
@@ -312,9 +315,28 @@ const ProductPage = () => {
 
               {/* Price */}
               <div className="mb-6">
-                <span className="text-4xl font-bold text-gray-900">
-                  ${product.price}
-                </span>
+                {(() => {
+                  const priceObj = getPriceForCountry(product, selectedCountry);
+                  const isFreshSale = freshSaleData && freshSaleData.productId === product._id && freshSaleData.isActive;
+                  
+                  if (isFreshSale) {
+                    const discountedAmount = priceObj.price * (1 - freshSaleData.discount / 100);
+                    const discountedPrice = formatConvertedPrice(discountedAmount, selectedCountry);
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl text-gray-400 line-through">{priceObj.symbol}{priceObj.price}</span>
+                          <span className="bg-red-100 text-red-700 px-3 py-1 rounded-lg font-bold text-sm">
+                            -{freshSaleData.discount}% OFF
+                          </span>
+                        </div>
+                        <span className="text-4xl font-bold text-red-600">{discountedPrice.symbol}{discountedPrice.price}</span>
+                      </div>
+                    );
+                  }
+                  
+                  return <span className="text-4xl font-bold text-gray-900">{priceObj.symbol}{priceObj.price}</span>;
+                })()}
               </div>
 
               {/* Stock Status */}

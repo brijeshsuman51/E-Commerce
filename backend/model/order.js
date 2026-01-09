@@ -26,11 +26,26 @@ const orderSchema = new Schema({
             type:Number,
             required:true,
             min:0
+        },
+        originalPrice:{
+            type:Number,
+            min:0
+        },
+        discountApplied:{
+            type:Number,
+            default:0,
+            min:0,
+            max:100
         }
     }],
     totalAmount:{
         type:Number,
         required:true,
+        min:0
+    },
+    totalSavings:{
+        type:Number,
+        default:0,
         min:0
     },
     status:{

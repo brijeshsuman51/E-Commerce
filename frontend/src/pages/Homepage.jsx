@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { 
-  Loader2, ChevronLeft, ChevronRight, 
+  Loader2, ChevronLeft, ChevronRight, Truck, Shield, Star, 
   Filter, X, ShoppingCart, Clock, Zap, Mail, Megaphone
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../cartSlice';
+import { getPriceForCountry, getCurrencyForCountry, formatConvertedPrice } from '../utils/pricing';
 
 const CategoryCard = ({ title, products, type = "single", navigate, categorySlug, handleProductClick }) => {
     if (!products || products.length === 0) return null;
@@ -53,7 +54,7 @@ const CategoryCard = ({ title, products, type = "single", navigate, categorySlug
     );
 };
 
-const ProductCarousel = ({ title, products, navigate, handleAddToCart, freshSaleData, handleProductClick }) => {
+const ProductCarousel = ({ title, products, navigate, handleAddToCart, freshSaleData, handleProductClick, selectedCountry }) => {
     const scrollRef = useRef(null);
   
     const scroll = (direction) => {
@@ -65,18 +66,21 @@ const ProductCarousel = ({ title, products, navigate, handleAddToCart, freshSale
     };
   
     const getPrice = (product) => {
-        if (freshSaleData && freshSaleData.productId === product._id && freshSaleData.isActive) {
-            const discounted = product.price * (1 - freshSaleData.discount / 100);
-            return (
-                <div className="flex flex-col">
-                    <span className="text-xs text-gray-400 line-through">${product.price}</span>
-                    <span className="text-lg font-bold text-red-600 flex items-center gap-1">
-                        ${discounted.toFixed(2)} <Zap className="w-3 h-3 fill-current" />
-                    </span>
-                </div>
-            );
-        }
-        return <p className="text-lg font-bold text-blue-700 mb-3">${product.price}</p>;
+      const priceObj = getPriceForCountry(product, selectedCountry);
+
+      if (freshSaleData && freshSaleData.productId === product._id && freshSaleData.isActive) {
+        const discountedAmount = priceObj.price * (1 - freshSaleData.discount / 100);
+        const discountedPriceObj = formatConvertedPrice(discountedAmount, selectedCountry);
+        return (
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-400 line-through">{priceObj.symbol}{priceObj.price}</span>
+            <span className="text-lg font-bold text-red-600 flex items-center gap-1">
+              {discountedPriceObj.symbol}{discountedPriceObj.price} <Zap className="w-3 h-3 fill-current" />
+            </span>
+          </div>
+        );
+      }
+      return <p className="text-lg font-bold text-blue-700 mb-3">{priceObj.symbol}{priceObj.price}</p>;
     };
   
     if (!products || products.length === 0) return null;
@@ -134,7 +138,7 @@ const Homepage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
-  const { user } = useSelector((state) => state.auth);
+  const { user, selectedCountry } = useSelector((state) => state.auth);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -282,7 +286,7 @@ const Homepage = () => {
     
 
     if (user && (tempFilters.category || tempFilters.brand || tempFilters.minPrice || tempFilters.maxPrice)) {
-      const searchQuery = `Filter: ${tempFilters.category || 'All'} ${tempFilters.brand ? `Brand: ${tempFilters.brand}` : ''} ${tempFilters.minPrice ? `Min: $${tempFilters.minPrice}` : ''} ${tempFilters.maxPrice ? `Max: $${tempFilters.maxPrice}` : ''}`.trim();
+      const searchQuery = `Filter: ${tempFilters.category || 'All'} ${tempFilters.brand ? `Brand: ${tempFilters.brand}` : ''} ${tempFilters.minPrice ? `Min: ${getCurrencyForCountry(selectedCountry).symbol}${tempFilters.minPrice}` : ''} ${tempFilters.maxPrice ? `Max: ${getCurrencyForCountry(selectedCountry).symbol}${tempFilters.maxPrice}` : ''}`.trim();
       trackSearchHistory(searchQuery, tempFilters.category || '');
     }
   };
@@ -291,8 +295,9 @@ const Homepage = () => {
   const filteredProducts = products.filter(product => {
     if (filters.category && product.category !== filters.category) return false;
     if (filters.brand && product.brand !== filters.brand) return false;
-    if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
-    if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
+    const productPrice = getPriceForCountry(product, selectedCountry).price;
+    if (filters.minPrice && productPrice < parseFloat(filters.minPrice)) return false;
+    if (filters.maxPrice && productPrice > parseFloat(filters.maxPrice)) return false;
     if (filters.minRating && product.rating < parseFloat(filters.minRating)) return false;
     if (filters.search && !product.name.toLowerCase().includes(filters.search.toLowerCase()) && 
         !product.brand?.toLowerCase().includes(filters.search.toLowerCase()) &&
@@ -344,7 +349,9 @@ const Homepage = () => {
       <section className="bg-gradient-to-r from-blue-500 to-purple-500 text-white relative">
         <div className="container mx-auto px-4 text-center pt-20 pb-48"> 
           <h1 className="text-5xl font-bold mb-6 drop-shadow-md">Welcome to Our Buy Zone</h1>
-          <p className="text-xl mb-8 max-w-2xl mx-auto text-blue-100">Discover amazing products at unbeatable prices.</p>
+          <p className="text-xl mb-8 max-w-2xl mx-auto text-blue-100">
+            Discover amazing products at unbeatable prices. Shop with confidence and enjoy fast and secure delivery.
+            </p>
         </div>
       </section>
 
@@ -399,10 +406,19 @@ const Homepage = () => {
                             <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{freshProduct?.name}</h3>
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] text-gray-400 line-through">Was ${freshProduct?.price}</span>
-                                    <span className="text-lg font-bold text-red-600 leading-none">
-                                        ${(freshProduct?.price * (1 - freshSaleData.discount / 100)).toFixed(0)}
-                                    </span>
+                                    {freshProduct ? (() => {
+                                      const originalPrice = getPriceForCountry(freshProduct, selectedCountry);
+                                      const discountedAmount = originalPrice.price * (1 - freshSaleData.discount / 100);
+                                      const discountedPrice = formatConvertedPrice(discountedAmount, selectedCountry);
+                                      return (
+                                        <>
+                                          <span className="text-[10px] text-gray-400 line-through">Was {originalPrice.symbol}{originalPrice.price}</span>
+                                          <span className="text-lg font-bold text-red-600 leading-none">
+                                            {discountedPrice.symbol}{discountedPrice.price}
+                                          </span>
+                                        </>
+                                      );
+                                    })() : null}
                                 </div>
                                 <button className="bg-red-100 text-red-600 p-1.5 rounded-lg hover:bg-red-600 hover:text-white transition-colors">
                                     <ShoppingCart className="w-4 h-4" />
@@ -450,9 +466,10 @@ const Homepage = () => {
              <div ref={featuredScrollRef} className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                {filteredProducts.map((product) => {
                  const isFresh = freshSaleData.isActive && freshSaleData.productId === product._id;
-                 const finalPrice = isFresh 
-                    ? (product.price * (1 - freshSaleData.discount / 100)).toFixed(2)
-                    : product.price;
+                 const priceObj = getPriceForCountry(product, selectedCountry);
+                 const finalPriceObj = isFresh 
+                    ? formatConvertedPrice(priceObj.price * (1 - freshSaleData.discount / 100), selectedCountry)
+                    : priceObj;
 
                  return (
                  <div key={product._id} className={`min-w-[280px] w-[280px] group/card bg-white border rounded-xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 ${isFresh ? 'border-red-200 ring-1 ring-red-100' : 'border-blue-100'}`}>
@@ -471,8 +488,8 @@ const Homepage = () => {
                      
                      <div className="flex items-center justify-between mt-2">
                        <div className="flex flex-col">
-                           {isFresh && <span className="text-xs text-gray-400 line-through">${product.price}</span>}
-                           <span className={`text-xl font-bold ${isFresh ? 'text-red-600' : 'text-gray-900'}`}>${finalPrice}</span>
+                           {isFresh && <span className="text-xs text-gray-400 line-through">{priceObj.symbol}{priceObj.price}</span>}
+                           <span className={`text-xl font-bold ${isFresh ? 'text-red-600' : 'text-gray-900'}`}>{finalPriceObj.symbol}{finalPriceObj.price}</span>
                        </div>
                        <button 
                          disabled={product.stock === 0}
@@ -492,9 +509,52 @@ const Homepage = () => {
 
       {/* CAROUSELS */}
       <div className="container mx-auto pb-10 mt-8">
-        <ProductCarousel title="Recommended For You" products={filteredProducts.slice().reverse()} navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} />
+        <ProductCarousel title="Recommended For You" products={filteredProducts.slice().reverse()} navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} selectedCountry={selectedCountry} />
+        <ProductCarousel title="Best Sellers in Home" products={displayHome.filter(p => filteredProducts.includes(p))}  navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} selectedCountry={selectedCountry} />
       </div>
       
+      <section className="py-16 bg-white border-t border-blue-100">
+              <div className="container mx-auto px-4">
+                <div className="grid md:grid-cols-3 gap-8">
+                  <div className="text-center group">
+                    <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-100 transition-colors">
+                      <Truck className="w-10 h-10 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 text-gray-800">Fast Delivery</h3>
+                    <p className="text-gray-500 max-w-xs mx-auto">Get your orders delivered quickly and safely to your doorstep.</p>
+                  </div>
+                  <div className="text-center group">
+                    <div className="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-100 transition-colors">
+                      <Shield className="w-10 h-10 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 text-gray-800">Secure Shopping</h3>
+                    <p className="text-gray-500 max-w-xs mx-auto">Your personal information and payments are fully protected.</p>
+                  </div>
+                  <div className="text-center group">
+                    <div className="bg-purple-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-100 transition-colors">
+                      <Star className="w-10 h-10 text-purple-600" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 text-gray-800">Quality Products</h3>
+                    <p className="text-gray-500 max-w-xs mx-auto">We offer only the highest quality products verified by our quality control team.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+      
+      <section className="bg-gray-900 text-white py-16">
+              <div className="container mx-auto px-4 text-center">
+                <h2 className="text-3xl font-bold mb-4">Ready to Start Shopping?</h2>
+                <p className="text-xl mb-8 text-gray-300">Join thousands of satisfied customers today.</p>
+                <div className="space-x-4">
+                  <button 
+                    onClick={handleShopNow}
+                    className="bg-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-500 transition-colors shadow-lg hover:shadow-blue-500/50"
+                  >
+                    Shop Now
+                  </button>
+                </div>
+              </div>
+            </section>
       {/* FILTER MODAL */}
       {isFilterModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

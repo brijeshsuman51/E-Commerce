@@ -6,7 +6,7 @@ import {
   Save, X, Loader2, AlertCircle, CheckCircle
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
-import { updateUser } from '../authSlice';
+import { updateUser, updateSelectedCountry } from '../authSlice';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -47,6 +47,7 @@ const ProfilePage = () => {
       const response = await axiosClient.get('/user/profile');
       const userData = response.data.user;
       setProfile(userData);
+      dispatch(updateSelectedCountry(userData.address?.country || 'INDIA'));
 
 
       setFormData({
@@ -80,6 +81,10 @@ const ProfilePage = () => {
           [child]: value
         }
       }));
+      
+      if (name === 'address.country') {
+        dispatch(updateSelectedCountry(value));
+      }
     } else {
       setFormData(prev => ({
         ...prev,
@@ -111,11 +116,8 @@ const ProfilePage = () => {
 
       setProfile(response.data.user);
       dispatch(updateUser(response.data.user));
-
       setSuccess(true);
       setIsEditing(false);
-
-
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Profile update error:', err);
@@ -231,7 +233,6 @@ const ProfilePage = () => {
 
         {/* Profile Information */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Personal Information */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <User className="w-5 h-5 text-blue-600" />
@@ -239,7 +240,6 @@ const ProfilePage = () => {
             </h2>
 
             <div className="space-y-4">
-              {/* First Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   First Name *
@@ -318,7 +318,6 @@ const ProfilePage = () => {
             </h2>
 
             <div className="space-y-4">
-              {/* Street */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Street Address

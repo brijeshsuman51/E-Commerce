@@ -9,6 +9,8 @@ import {
   X
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
+import { useSelector } from 'react-redux';
+import { formatPrice, getPriceForCountry } from '../utils/pricing';
 
 const DeleteProduct = () => {
   const navigate = useNavigate();
@@ -18,6 +20,7 @@ const DeleteProduct = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [product, setProduct] = useState(null);
+  const { selectedCountry } = useSelector(state => state.auth);
 
   useEffect(() => {
     fetchProduct();
@@ -155,7 +158,10 @@ const DeleteProduct = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-500">Price</label>
-                <p className="text-gray-900">${product.price}</p>
+                {(() => {
+                  const po = getPriceForCountry(product, selectedCountry);
+                  return <p className="text-gray-900">{po.symbol}{po.price}</p>;
+                })()}
               </div>
 
               <div>

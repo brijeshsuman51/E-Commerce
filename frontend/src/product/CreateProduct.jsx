@@ -207,8 +207,9 @@ const CreateProduct = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Price *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
               <input type="number" name="price" value={formData.price} onChange={handleInputChange} min="0" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00" required />
+              {/* <p className="text-xs text-gray-500 mt-1">Enter price in $ currency</p> */}
             </div>
 
             <div>
