@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* Shimmer animation for skeleton loaders */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
 /* Custom animations for sales section */
 /* @keyframes countdown-pulse {
   0%, 100% {

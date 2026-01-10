@@ -8,17 +8,16 @@ import {
 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { addToCart } from '../cartSlice';
+import { fetchProductById } from '../productSlice';
 import { getPriceForCountry, getCurrencyForCountry, formatConvertedPrice } from '../utils/pricing';
+import { ProductDetailsShimmer } from '../components/Shimmer';
 
 const ProductPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, selectedCountry } = useSelector((state) => state.auth);
-
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { currentProduct, loading, error } = useSelector((state) => state.products);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -32,46 +31,34 @@ const ProductPage = () => {
   const [editingReview, setEditingReview] = useState(null);
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosClient.get(`/product/getProductById/${id}`);
-        setProduct(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch product');
-        setLoading(false);
-      }
-    };
-
-    const fetchReviews = async () => {
-      try {
-        setReviewsLoading(true);
-        const response = await axiosClient.get(`/review/product/${id}`);
-        setReviews(response.data);
-        setReviewsLoading(false);
-      } catch (err) {
-        console.error('Failed to fetch reviews:', err);
-        setReviewsLoading(false);
-      }
-    };
-
-    const fetchFreshSale = async () => {
-      try {
-        const response = await axiosClient.get('/freshsale/current');
-        setFreshSaleData(response.data.freshSale);
-      } catch (err) {
-        console.error('Failed to fetch fresh sale:', err);
-        setFreshSaleData(null);
-      }
-    };
-
     if (id) {
-      fetchProduct();
+      dispatch(fetchProductById(id));
       fetchReviews();
       fetchFreshSale();
     }
-  }, [id]);
+  }, [id, dispatch]);
+
+  const fetchReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      const response = await axiosClient.get(`/review/product/${id}`);
+      setReviews(response.data);
+      setReviewsLoading(false);
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err);
+      setReviewsLoading(false);
+    }
+  };
+
+  const fetchFreshSale = async () => {
+    try {
+      const response = await axiosClient.get('/freshsale/current');
+      setFreshSaleData(response.data.freshSale);
+    } catch (err) {
+      console.error('Failed to fetch fresh sale:', err);
+      setFreshSaleData(null);
+    }
+  };
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -80,11 +67,11 @@ const ProductPage = () => {
       return;
     }
 
-    if (!product || product.stock === 0) return;
+    if (!currentProduct || currentProduct.stock === 0) return;
 
     try {
       setAddingToCart(true);
-      await dispatch(addToCart({ productId: product._id, quantity })).unwrap();
+      await dispatch(addToCart({ productId: currentProduct._id, quantity })).unwrap();
       alert('Added to cart successfully!');
     } catch (error) {
       alert('Failed to add to cart: ' + error);
@@ -94,7 +81,7 @@ const ProductPage = () => {
   };
 
   const updateQuantity = (newQuantity) => {
-    if (newQuantity >= 1 && newQuantity <= product.stock) {
+    if (newQuantity >= 1 && newQuantity <= currentProduct.stock) {
       setQuantity(newQuantity);
     }
   };
@@ -136,7 +123,6 @@ const ProductPage = () => {
       ]);
 
       setReviews(reviewsResponse.data);
-      setProduct(productResponse.data);
       setReviewComment('');
       setReviewRating(5);
       setShowReviewForm(false);
@@ -166,7 +152,6 @@ const ProductPage = () => {
       ]);
 
       setReviews(reviewsResponse.data);
-      setProduct(productResponse.data);
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to delete review');
     }
@@ -180,14 +165,7 @@ const ProductPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading product...</p>
-        </div>
-      </div>
-    );
+    return <ProductDetailsShimmer />;
   }
 
   if (error) {
@@ -207,7 +185,7 @@ const ProductPage = () => {
     );
   }
 
-  if (!product) {
+  if (!currentProduct) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -243,10 +221,10 @@ const ProductPage = () => {
           <div className="space-y-4">
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                {product.images && product.images.length > 0 ? (
+                {currentProduct.images && currentProduct.images.length > 0 ? (
                   <img
-                    src={product.images[selectedImage]}
-                    alt={product.name}
+                    src={currentProduct.images[selectedImage]}
+                    alt={currentProduct.name}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -258,9 +236,9 @@ const ProductPage = () => {
             </div>
 
             {/* Thumbnail Images */}
-            {product.images && product.images.length > 1 && (
+            {currentProduct.images && currentProduct.images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto">
-                {product.images.map((image, index) => (
+                {currentProduct.images.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
@@ -270,7 +248,7 @@ const ProductPage = () => {
                   >
                     <img
                       src={image}
-                      alt={`${product.name} ${index + 1}`}
+                      alt={`${currentProduct.name} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
                   </button>
@@ -284,13 +262,13 @@ const ProductPage = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <div className="mb-4">
                 <p className="text-sm text-blue-600 font-semibold uppercase tracking-wider mb-2">
-                  {product.category}
+                  {currentProduct.category}
                 </p>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {product.name}
+                  {currentProduct.name}
                 </h1>
-                {product.brand && (
-                  <p className="text-lg text-gray-600 mb-4">by {product.brand}</p>
+                {currentProduct.brand && (
+                  <p className="text-lg text-gray-600 mb-4">by {currentProduct.brand}</p>
                 )}
               </div>
 
@@ -301,7 +279,7 @@ const ProductPage = () => {
                     <Star
                       key={i}
                       className={`w-5 h-5 ${
-                        i < Math.floor(product.rating)
+                        i < Math.floor(currentProduct.rating)
                           ? 'text-yellow-400 fill-current'
                           : 'text-gray-300'
                       }`}
@@ -309,15 +287,15 @@ const ProductPage = () => {
                   ))}
                 </div>
                 <span className="ml-2 text-sm text-gray-600">
-                  {product.rating} ({product.numReviews} reviews)
+                  {currentProduct.rating} ({currentProduct.numReviews} reviews)
                 </span>
               </div>
 
               {/* Price */}
               <div className="mb-6">
                 {(() => {
-                  const priceObj = getPriceForCountry(product, selectedCountry);
-                  const isFreshSale = freshSaleData && freshSaleData.productId === product._id && freshSaleData.isActive;
+                  const priceObj = getPriceForCountry(currentProduct, selectedCountry);
+                  const isFreshSale = freshSaleData && freshSaleData.productId === currentProduct._id && freshSaleData.isActive;
                   
                   if (isFreshSale) {
                     const discountedAmount = priceObj.price * (1 - freshSaleData.discount / 100);
@@ -341,10 +319,10 @@ const ProductPage = () => {
 
               {/* Stock Status */}
               <div className="mb-6">
-                {product.stock > 0 ? (
+                {currentProduct.stock > 0 ? (
                   <div className="flex items-center text-green-600">
                     <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
-                    <span className="font-medium">In Stock ({product.stock} available)</span>
+                    <span className="font-medium">In Stock ({currentProduct.stock} available)</span>
                   </div>
                 ) : (
                   <div className="flex items-center text-red-600">
@@ -355,7 +333,7 @@ const ProductPage = () => {
               </div>
 
               {/* Quantity Selector */}
-              {product.stock > 0 && (
+              {currentProduct.stock > 0 && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Quantity
@@ -371,7 +349,7 @@ const ProductPage = () => {
                     <span className="w-12 text-center font-medium">{quantity}</span>
                     <button
                       onClick={() => updateQuantity(quantity + 1)}
-                      disabled={quantity >= product.stock}
+                      disabled={quantity >= currentProduct.stock}
                       className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Plus className="w-4 h-4" />
@@ -383,9 +361,9 @@ const ProductPage = () => {
               {/* Add to Cart Button */}
               <button
                 onClick={handleAddToCart}
-                disabled={product.stock === 0 || addingToCart}
+                disabled={currentProduct.stock === 0 || addingToCart}
                 className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center gap-2 ${
-                  product.stock === 0
+                  currentProduct.stock === 0
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : addingToCart
                     ? 'bg-blue-400 text-white cursor-wait'
@@ -397,7 +375,7 @@ const ProductPage = () => {
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Adding...
                   </>
-                ) : product.stock === 0 ? (
+                ) : currentProduct.stock === 0 ? (
                   'Out of Stock'
                 ) : (
                   <>
@@ -429,7 +407,7 @@ const ProductPage = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Description</h2>
           <div className="prose max-w-none">
             <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-              {product.description}
+              {currentProduct.description}
             </p>
           </div>
         </div>
@@ -600,17 +578,17 @@ const ProductPage = () => {
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <h3 className="font-semibold text-gray-900 mb-2">Category</h3>
-            <p className="text-gray-600 capitalize">{product.category}</p>
+            <p className="text-gray-600 capitalize">{currentProduct.category}</p>
           </div>
-          {product.brand && (
+          {currentProduct.brand && (
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-2">Brand</h3>
-              <p className="text-gray-600">{product.brand}</p>
+              <p className="text-gray-600">{currentProduct.brand}</p>
             </div>
           )}
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <h3 className="font-semibold text-gray-900 mb-2">Stock</h3>
-            <p className="text-gray-600">{product.stock} units available</p>
+            <p className="text-gray-600">{currentProduct.stock} units available</p>
           </div>
         </div>
       </div>

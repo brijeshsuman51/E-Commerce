@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Clock, CheckCircle, XCircle, Loader2, MapPin } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { formatPrice } from '../utils/pricing';
+import { OrderShimmer } from '../components/Shimmer';
 
 const Order = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const Order = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showContent, setShowContent] = useState(false);
 
   const statuses = ['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
@@ -37,6 +39,16 @@ const Order = () => {
 
     fetchOrders();
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (loading) {
+      setShowContent(false);
+      const timer = setTimeout(() => setShowContent(true), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowContent(true);
+    }
+  }, [loading]);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -82,10 +94,14 @@ const Order = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading your orders...</p>
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Orders</h1>
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <OrderShimmer key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -230,7 +246,7 @@ const Order = () => {
                         ))}
                       </div>
                     </div>
-                    
+
                     <div className="border-t border-gray-100 pt-4 mt-4">
                       <div className="flex items-center gap-2 mb-2">
                         <MapPin className="w-4 h-4 text-gray-500" />

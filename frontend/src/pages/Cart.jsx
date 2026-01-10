@@ -5,6 +5,7 @@ import { fetchCart, removeFromCart, updateCartItem } from '../cartSlice';
 import { ShoppingBag, Minus, Plus, Trash2, Loader2 } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import { getPriceForCountry, getCurrencyForCountry, formatConvertedPrice } from '../utils/pricing';
+import { ProductCardShimmer } from '../components/Shimmer';
 
 const Cart = () => {
   const dispatch = useDispatch();
@@ -13,13 +14,22 @@ const Cart = () => {
   const { user, selectedCountry } = useSelector((state) => state.auth);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [currentFreshSale, setCurrentFreshSale] = useState(null);
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
     if (user) {
       dispatch(fetchCart());
       fetchCurrentFreshSale();
     }
-  }, [dispatch, user]);
+    
+    if (loading) {
+      setShowContent(false);
+      const timer = setTimeout(() => setShowContent(true), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowContent(true);
+    }
+  }, [dispatch, user, loading]);
 
   const fetchCurrentFreshSale = async () => {
     try {
@@ -86,10 +96,14 @@ const Cart = () => {
 
   if (loading && items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading your cart...</p>
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <ProductCardShimmer key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -114,7 +128,6 @@ const Cart = () => {
                   const product = item.productId || {};
                   const originalPrice = getPriceForCountry(product, selectedCountry).price || 0;
                   
-                  // Check if this product has an active fresh sale
                   const hasSale = currentFreshSale && currentFreshSale.productId === product._id;
                   const discountedPrice = hasSale ? originalPrice * (1 - currentFreshSale.discount / 100) : originalPrice;
                   const itemTotal = discountedPrice * item.quantity;

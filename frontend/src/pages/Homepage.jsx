@@ -7,7 +7,10 @@ import {
 import axiosClient from '../utils/axiosClient';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../cartSlice';
+import { fetchAllProducts } from '../productSlice';
 import { getPriceForCountry, getCurrencyForCountry, formatConvertedPrice } from '../utils/pricing';
+import { CarouselShimmer, ProductGridShimmer, QuadCardsShimmer } from '../components/Shimmer';
+import FilterModal from '../components/Filter';
 
 const CategoryCard = ({ title, products, type = "single", navigate, categorySlug, handleProductClick }) => {
     if (!products || products.length === 0) return null;
@@ -139,9 +142,8 @@ const Homepage = () => {
   const navigate = useNavigate(); 
   const [searchParams] = useSearchParams();
   const { user, selectedCountry } = useSelector((state) => state.auth);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { allProducts, loading, error } = useSelector((state) => state.products);
+  const [showContent, setShowContent] = useState(false);
   const featuredScrollRef = useRef(null);
 
   const categoriesList = ['electronics','clothing','books','home','sports','beauty','toys','automotive'];
@@ -151,6 +153,7 @@ const Homepage = () => {
   const [tempFilters, setTempFilters] = useState({...filters});
   const [freshSaleData, setFreshSaleData] = useState({ isActive: false, timeString: '00:00:00', productId: null, discount: 0 });
   const [freshProduct, setFreshProduct] = useState(null);
+   const [activeTab, setActiveTab] = useState('category');
 
   useEffect(() => {
     const fetchFreshSale = async () => {
@@ -180,20 +183,8 @@ const Homepage = () => {
   }, []);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await axiosClient.get('/product/getAllProducts');
-        setProducts(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data || "Failed to fetch products");
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, []);
-
+    dispatch(fetchAllProducts());
+  }, [dispatch]);
 
   useEffect(() => {
     const searchQuery = searchParams.get('search');
@@ -203,11 +194,11 @@ const Homepage = () => {
   }, [searchParams]);
 
   useEffect(() => {
-      if (products.length > 0 && freshSaleData.productId) {
-          const found = products.find(p => p._id === freshSaleData.productId);
+      if (allProducts.length > 0 && freshSaleData.productId) {
+          const found = allProducts.find(p => p._id === freshSaleData.productId);
           setFreshProduct(found);
       }
-  }, [products, freshSaleData.productId]);
+  }, [allProducts, freshSaleData.productId]);
 
   const handleShopNow = () => {
     const featuredSection = document.getElementById('featured-products');
@@ -269,6 +260,7 @@ const Homepage = () => {
     if (user) {
       trackSearchHistory(`Category: ${category}`, category);
     }
+    navigate(`/category/${category.toLowerCase()}`);
   };
   
   const scrollFeatured = (direction) => {
@@ -292,7 +284,15 @@ const Homepage = () => {
   };
   const clearFilters = () => { setFilters({ category: '', brand: '', minPrice: '', maxPrice: '', minRating: '', sortBy: 'name', search: '' }); setIsFilterModalOpen(false); };
 
-  const filteredProducts = products.filter(product => {
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => setShowContent(true), 1000);
+      return () => clearTimeout(timer);
+    }
+    setShowContent(false);
+  }, [loading]);
+
+  const filteredProducts = allProducts.filter(product => {
     if (filters.category && product.category !== filters.category) return false;
     if (filters.brand && product.brand !== filters.brand) return false;
     const productPrice = getPriceForCountry(product, selectedCountry).price;
@@ -310,12 +310,15 @@ const Homepage = () => {
     return a.name.localeCompare(b.name);
   });
 
-  const electronics = products.filter(p => p.category?.toLowerCase().includes('electronic') || p.category?.toLowerCase().includes('tech'));
-  const home = products.filter(p => p.category?.toLowerCase().includes('home') || p.category?.toLowerCase().includes('appliance'));
-  const fashion = products.filter(p => p.category?.toLowerCase().includes('cloth') || p.category?.toLowerCase().includes('fashion'));
-  const displayElectronics = electronics.length ? electronics : products.slice(0, 4);
-  const displayHome = home.length ? home : products.slice(4, 8);
-  const displayFashion = fashion.length ? fashion : products.slice(8, 9);
+  const uniqueBrands = [...new Set(allProducts.filter(p => p.brand).map(p => p.brand))].sort();
+  const uniqueCategories = [...new Set(allProducts.filter(p => p.category).map(p => p.category))].sort();
+
+  const electronics = allProducts.filter(p => p.category?.toLowerCase().includes('electronic') || p.category?.toLowerCase().includes('tech'));
+  const home = allProducts.filter(p => p.category?.toLowerCase().includes('home') || p.category?.toLowerCase().includes('appliance'));
+  const fashion = allProducts.filter(p => p.category?.toLowerCase().includes('cloth') || p.category?.toLowerCase().includes('fashion'));
+  const displayElectronics = electronics.length ? electronics : allProducts.slice(0, 4);
+  const displayHome = home.length ? home : allProducts.slice(4, 8);
+  const displayFashion = fashion.length ? fashion : allProducts.slice(8, 9);
 
   return (
     <div className="min-h-screen bg-blue-50/50 relative">
@@ -357,92 +360,96 @@ const Homepage = () => {
 
       {/* QUAD CARDS */}
       <div className="container mx-auto px-4 -mt-32 relative z-10 mb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <CategoryCard title="Electronics & Gadgets" products={displayElectronics} categorySlug="electronics" type="grid" navigate={navigate} handleProductClick={handleProductClick}/>
-          <CategoryCard title="Home Appliances" products={displayHome} categorySlug="home" type="single" navigate={navigate} handleProductClick={handleProductClick}/>
-          <CategoryCard title="Fashion Trends" products={displayFashion} categorySlug="clothing" type="single" navigate={navigate} handleProductClick={handleProductClick}/>
-          
-          {/* SPONSORSHIP */}
-          <div className="bg-white flex flex-col justify-between h-full shadow-lg rounded-xl border border-blue-100 overflow-hidden relative">
+        {loading || !showContent ? (
+          <QuadCardsShimmer />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <CategoryCard title="Electronics & Gadgets" products={displayElectronics} categorySlug="electronics" type="grid" navigate={navigate} handleProductClick={handleProductClick}/>
+            <CategoryCard title="Home Appliances" products={displayHome} categorySlug="home" type="single" navigate={navigate} handleProductClick={handleProductClick}/>
+            <CategoryCard title="Fashion Trends" products={displayFashion} categorySlug="clothing" type="single" navigate={navigate} handleProductClick={handleProductClick}/>
             
+            {/* SPONSORSHIP */}
+            <div className="bg-white flex flex-col justify-between h-full shadow-lg rounded-xl border border-blue-100 overflow-hidden relative">
+              
 
-            <div className="p-4 bg-white border-b border-gray-100 z-20">
-                <h2 className="text-xl font-bold mb-2 text-gray-800 line-clamp-1">
-                    {user ? `Welcome back, ${user.firstName}` : 'Sign in for best experience'}
-                </h2>
-                <button 
-                    onClick={() => user ? navigate('/profile') : navigate('/login')}
-                    className={`w-full text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors ${
-                        user 
-                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                >
-                    {user ? 'My Account' : 'Sign in securely'}
-                </button>
-            </div>
+              <div className="p-4 bg-white border-b border-gray-100 z-20">
+                  <h2 className="text-xl font-bold mb-2 text-gray-800 line-clamp-1">
+                      {user ? `Welcome back, ${user.firstName}` : 'Sign in for best experience'}
+                  </h2>
+                  <button 
+                      onClick={() => user ? navigate('/profile') : navigate('/login')}
+                      className={`w-full text-sm font-semibold py-2.5 rounded-lg shadow-sm transition-colors ${
+                          user 
+                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                  >
+                      {user ? 'My Account' : 'Sign in securely'}
+                  </button>
+              </div>
 
 
-            <div className="flex-1 p-4 relative flex flex-col justify-center">
-                {freshSaleData.isActive ? (
-                    <div className="cursor-pointer group h-full flex flex-col" onClick={() => navigate(`/product/${freshProduct?._id}`)}>
-                         <div className="flex justify-between items-center mb-2">
-                             <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded border border-red-100 flex items-center gap-1 animate-pulse">
-                                 <Zap className="w-3 h-3 fill-current" /> FRESH DEAL
-                             </span>
-                             <div className="text-xs font-mono font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> {freshSaleData.timeString}
-                             </div>
-                         </div>
-    
-                        <div className="relative flex-1 bg-gray-50 rounded-lg p-2 mb-2 flex items-center justify-center overflow-hidden">
-                            <img src={freshProduct?.images?.[0]} alt="Deal" className="max-w-full h-24 object-contain group-hover:scale-110 transition-transform duration-500" />
-                            <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                                -{freshSaleData.discount}%
-                            </div>
-                        </div>
+              <div className="flex-1 p-4 relative flex flex-col justify-center">
+                  {freshSaleData.isActive ? (
+                      <div className="cursor-pointer group h-full flex flex-col" onClick={() => navigate(`/product/${freshProduct?._id}`)}>
+                           <div className="flex justify-between items-center mb-2">
+                               <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded border border-red-100 flex items-center gap-1 animate-pulse">
+                                   <Zap className="w-3 h-3 fill-current" /> FRESH DEAL
+                               </span>
+                               <div className="text-xs font-mono font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> {freshSaleData.timeString}
+                               </div>
+                           </div>
+      
+                          <div className="relative flex-1 bg-gray-50 rounded-lg p-2 mb-2 flex items-center justify-center overflow-hidden">
+                              <img src={freshProduct?.images?.[0]} alt="Deal" className="max-w-full h-24 object-contain group-hover:scale-110 transition-transform duration-500" />
+                              <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                                  -{freshSaleData.discount}%
+                              </div>
+                          </div>
 
-                        <div>
-                            <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{freshProduct?.name}</h3>
-                            <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                    {freshProduct ? (() => {
-                                      const originalPrice = getPriceForCountry(freshProduct, selectedCountry);
-                                      const discountedAmount = originalPrice.price * (1 - freshSaleData.discount / 100);
-                                      const discountedPrice = formatConvertedPrice(discountedAmount, selectedCountry);
-                                      return (
-                                        <>
-                                          <span className="text-[10px] text-gray-400 line-through">Was {originalPrice.symbol}{originalPrice.price}</span>
-                                          <span className="text-lg font-bold text-red-600 leading-none">
-                                            {discountedPrice.symbol}{discountedPrice.price}
-                                          </span>
-                                        </>
-                                      );
-                                    })() : null}
-                                </div>
-                                <button className="bg-red-100 text-red-600 p-1.5 rounded-lg hover:bg-red-600 hover:text-white transition-colors">
-                                    <ShoppingCart className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg border border-dashed border-gray-300 p-4">
-                        <div className="bg-white p-3 rounded-full shadow-sm mb-3">
-                            <Megaphone className="w-6 h-6 text-blue-500" />
-                        </div>
-                        <h3 className="font-bold text-gray-700 mb-1">Advertise Here</h3>
-                        <p className="text-xs text-gray-500 mb-4 px-2">
-                            Reach thousands of customers daily. Boost your brand visibility now.
-                        </p>
-                        <button className="text-xs font-bold text-blue-600 border border-blue-200 bg-white px-3 py-1.5 rounded-full hover:bg-blue-50 flex items-center gap-1 transition-colors">
-                            <Mail className="w-3 h-3" /> Contact Sales
-                        </button>
-                    </div>
-                )}
+                          <div>
+                              <h3 className="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{freshProduct?.name}</h3>
+                              <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                      {freshProduct ? (() => {
+                                        const originalPrice = getPriceForCountry(freshProduct, selectedCountry);
+                                        const discountedAmount = originalPrice.price * (1 - freshSaleData.discount / 100);
+                                        const discountedPrice = formatConvertedPrice(discountedAmount, selectedCountry);
+                                        return (
+                                          <>
+                                            <span className="text-[10px] text-gray-400 line-through">Was {originalPrice.symbol}{originalPrice.price}</span>
+                                            <span className="text-lg font-bold text-red-600 leading-none">
+                                              {discountedPrice.symbol}{discountedPrice.price}
+                                            </span>
+                                          </>
+                                        );
+                                      })() : null}
+                                  </div>
+                                  <button className="bg-red-100 text-red-600 p-1.5 rounded-lg hover:bg-red-600 hover:text-white transition-colors">
+                                      <ShoppingCart className="w-4 h-4" />
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                  ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg border border-dashed border-gray-300 p-4">
+                          <div className="bg-white p-3 rounded-full shadow-sm mb-3">
+                              <Megaphone className="w-6 h-6 text-blue-500" />
+                          </div>
+                          <h3 className="font-bold text-gray-700 mb-1">Advertise Here</h3>
+                          <p className="text-xs text-gray-500 mb-4 px-2">
+                              Reach thousands of customers daily. Boost your brand visibility now.
+                          </p>
+                          <button className="text-xs font-bold text-blue-600 border border-blue-200 bg-white px-3 py-1.5 rounded-full hover:bg-blue-50 flex items-center gap-1 transition-colors">
+                              <Mail className="w-3 h-3" /> Contact Sales
+                          </button>
+                      </div>
+                  )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* FEATURED PRODUCTS */}
@@ -457,7 +464,9 @@ const Homepage = () => {
         </div>
         
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20"><Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" /><p>Loading...</p></div>
+          <ProductGridShimmer count={6} />
+        ) : !showContent ? (
+          <ProductGridShimmer count={6} />
         ) : (
           <div className="relative">
              <button onClick={() => scrollFeatured('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 border border-gray-200 p-2 rounded-full shadow-lg text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white -ml-4"><ChevronLeft className="w-6 h-6" /></button>
@@ -509,8 +518,23 @@ const Homepage = () => {
 
       {/* CAROUSELS */}
       <div className="container mx-auto pb-10 mt-8">
-        <ProductCarousel title="Recommended For You" products={filteredProducts.slice().reverse()} navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} selectedCountry={selectedCountry} />
-        <ProductCarousel title="Best Sellers in Home" products={displayHome.filter(p => filteredProducts.includes(p))}  navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} selectedCountry={selectedCountry} />
+        {loading || !showContent ? (
+          <>
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-4 text-gray-800">Recommended For You</h3>
+              <CarouselShimmer count={6} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-gray-800">Best Sellers in Home</h3>
+              <CarouselShimmer count={6} />
+            </div>
+          </>
+        ) : (
+          <>
+            <ProductCarousel title="Recommended For You" products={filteredProducts.slice().reverse()} navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} selectedCountry={selectedCountry} />
+            <ProductCarousel title="Best Sellers in Home" products={displayHome.filter(p => filteredProducts.includes(p))}  navigate={navigate} handleAddToCart={handleAddToCart} freshSaleData={freshSaleData} handleProductClick={handleProductClick} selectedCountry={selectedCountry} />
+          </>
+        )}
       </div>
       
       <section className="py-16 bg-white border-t border-blue-100">
@@ -555,22 +579,19 @@ const Homepage = () => {
                 </div>
               </div>
             </section>
-      {/* FILTER MODAL */}
-      {isFilterModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-             <div className="bg-white p-6 rounded-lg w-full max-w-md">
-                <div className="flex justify-between mb-4">
-                    <h3 className="font-bold text-lg">Filters</h3>
-                    <button onClick={() => setIsFilterModalOpen(false)}><X className="text-gray-500 hover:text-red-500"/></button>
-                </div>
-
-                <div className="space-y-4">
-                    <button onClick={clearFilters} className="w-full border py-2 rounded">Clear Filters</button>
-                    <button onClick={applyFilters} className="w-full bg-blue-600 text-white py-2 rounded">Apply Filters</button>
-                </div>
-             </div>
-          </div>
-      )}
+      
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        tempFilters={tempFilters}
+        setTempFilters={setTempFilters}
+        uniqueCategories={uniqueCategories}
+        uniqueBrands={uniqueBrands}
+        applyFilters={applyFilters}
+        clearFilters={clearFilters}
+      />
     </div>
   );
 };
